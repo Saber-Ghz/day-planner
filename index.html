@@ -791,13 +791,12 @@ function rm(){
 }
 function nm(n){const[y,m]=S.mv.split('-').map(Number),d=new Date(y,m-1+n,1);S.mv=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;addSt=null;editSt=null;re();}
 
-// ── Google Drive Integration — SILENT REFRESH / ROBUST ───────────────
-// What this does:
-// 1) Keeps the current simple GitHub Pages setup.
-// 2) Stores only the Client ID + Drive file ID locally. It does NOT store a permanent refresh token.
-// 3) Uses Google Identity Services silent token refresh when possible.
-// 4) Falls back to a visible Connect button only when Google requires user interaction.
-// 5) Keeps Export / Import as the safety backup path.
+// ── Google Drive Integration — SAFE RECONNECT / ROBUST ───────────────
+// Best possible setup for a simple GitHub Pages app:
+// 1) Local saving always works first.
+// 2) Drive can reconnect silently when Google allows it.
+// 3) If Google blocks silent login, the button returns to Connect instead of getting stuck.
+// 4) No permanent refresh token is stored. Export / Import remains the safety backup.
 
 const GD={
   clientId: localStorage.getItem('pl_gcid')||'',
@@ -842,7 +841,7 @@ function gdStatus(){
 
 function gdClick(){
   if(!GD.clientId){ gdPanelOpen(); return; }
-  // User clicked, so use a visible consent/account prompt if Google needs it.
+  // User click = allowed visible Google prompt.
   gdConnect({prompt:'consent',notify:true,loadFile:true});
 }
 
@@ -850,8 +849,6 @@ function gdPanelOpen(){
   const p=document.getElementById('gdPanel');if(p)p.style.display='block';
   const inp=document.getElementById('gdClientInput');
   if(inp)inp.value=GD.clientId||'';
-
-  // Replace literal ${location.origin} helper text if present.
   try{
     const panel=document.getElementById('gdPanel');
     if(panel)panel.innerHTML=panel.innerHTML.replace('${location.origin}', location.origin);
@@ -911,11 +908,35 @@ async function gdConnect(opts={}){
     await gdLoadScript();
 
     return await new Promise((resolve)=>{
+      let settled=false;
+      let timer=null;
+      const finish=(ok)=>{
+        if(settled)return;
+        settled=true;
+        if(timer)clearTimeout(timer);
+        GD.connecting=false;
+        gdStatus();
+        resolve(ok);
+      };
+
+      // Silent reconnect must fail cleanly. Google may block it without a user click.
+      if(prompt===''){
+        timer=setTimeout(()=>{
+          GD.token='';
+          GD.expiresAt=0;
+          GD.connected=false;
+          GD.lastError='silent reconnect timed out';
+          sessionStorage.removeItem('pl_gat');
+          sessionStorage.removeItem('pl_gexp');
+          finish(false);
+        },4500);
+      }
+
       GD.tokenClient=google.accounts.oauth2.initTokenClient({
         client_id:GD.clientId,
         scope:'https://www.googleapis.com/auth/drive.file',
         callback:async(r)=>{
-          GD.connecting=false;
+          if(settled)return;
 
           if(r.error){
             GD.token='';
@@ -924,10 +945,8 @@ async function gdConnect(opts={}){
             GD.lastError=r.error;
             sessionStorage.removeItem('pl_gat');
             sessionStorage.removeItem('pl_gexp');
-            gdStatus();
-            // Do not show an error on automatic silent refresh. That would be annoying.
             if(notify)showToast('⚠ Auth failed: '+r.error);
-            resolve(false);
+            finish(false);
             return;
           }
 
@@ -938,7 +957,6 @@ async function gdConnect(opts={}){
           GD.lastError='';
           sessionStorage.setItem('pl_gat',GD.token);
           sessionStorage.setItem('pl_gexp',String(GD.expiresAt));
-          gdStatus();
 
           if(loadFile){
             if(GD.fileId){
@@ -950,20 +968,20 @@ async function gdConnect(opts={}){
             await gdSave(true);
           }
 
-          resolve(true);
+          finish(true);
         }
       });
 
-      // Silent mode works only if Google has an active browser session and third-party/cookie settings allow it.
-      // If it fails, the app stays usable locally and the button shows Connect.
       try{GD.tokenClient.requestAccessToken({prompt});}
       catch(e){
-        GD.connecting=false;
+        GD.token='';
+        GD.expiresAt=0;
         GD.connected=false;
         GD.lastError=e.message||String(e);
-        gdStatus();
+        sessionStorage.removeItem('pl_gat');
+        sessionStorage.removeItem('pl_gexp');
         if(notify)showToast('⚠ Could not open Google login');
-        resolve(false);
+        finish(false);
       }
     });
   }catch(e){
@@ -979,7 +997,6 @@ async function gdConnect(opts={}){
 async function gdAutoConnect(){
   if(!GD.clientId || GD.autoTried)return;
   GD.autoTried=true;
-  // Wait for the planner to render first. Then quietly try to renew the token.
   setTimeout(async()=>{
     const ok=await gdEnsureToken(true);
     if(ok){
@@ -1013,15 +1030,11 @@ async function gdFindExistingFile(){
 
 async function gdSave(notify=false){
   if(!GD.clientId){gdStatus();return;}
-
-  const hasToken=await gdEnsureToken(true);
-  if(!hasToken){
-    gdStatus();
-    if(notify)showToast('⚠ Click Connect for Drive save');
-    return;
+  if(!GD.token||!GD.connected||Date.now() > GD.expiresAt - 90000){
+    const ok=await gdEnsureToken(true);
+    if(!ok){gdStatus();return;}
   }
 
-  // If a save is already in progress, remember to run another one afterward.
   if(GD.saving){
     GD.pendingSave=true;
     return;
@@ -1040,24 +1053,15 @@ async function gdSave(notify=false){
         body
       });
     }else{
-      await gdFindExistingFile();
-      if(GD.fileId){
-        res=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,{
-          method:'PATCH',
-          headers:{Authorization:`Bearer ${GD.token}`,'Content-Type':'application/json'},
-          body
-        });
-      }else{
-        const meta=JSON.stringify({name:'planner-data.json',mimeType:'application/json'});
-        const fd=new FormData();
-        fd.append('metadata',new Blob([meta],{type:'application/json'}));
-        fd.append('file',new Blob([body],{type:'application/json'}));
-        res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
-          method:'POST',
-          headers:{Authorization:`Bearer ${GD.token}`},
-          body:fd
-        });
-      }
+      const meta=JSON.stringify({name:'planner-data.json',mimeType:'application/json'});
+      const fd=new FormData();
+      fd.append('metadata',new Blob([meta],{type:'application/json'}));
+      fd.append('file',new Blob([body],{type:'application/json'}));
+      res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
+        method:'POST',
+        headers:{Authorization:`Bearer ${GD.token}`},
+        body:fd
+      });
     }
 
     if(res.status===401||res.status===403){
@@ -1066,16 +1070,11 @@ async function gdSave(notify=false){
       GD.connected=false;
       sessionStorage.removeItem('pl_gat');
       sessionStorage.removeItem('pl_gexp');
-
       const ok=await gdEnsureToken(true);
-      if(ok){
-        GD.saving=false;
-        return gdSave(notify);
-      }
-
+      if(ok){GD.saving=false; return gdSave(notify);}
       GD.lastError='session expired';
       gdStatus();
-      showToast('⚠ Drive needs reconnect — click Connect');
+      if(notify)showToast('⚠ Drive session expired — click Connect');
       return;
     }
 
@@ -1111,20 +1110,12 @@ async function gdSave(notify=false){
 }
 
 async function gdLoadFile(notify=true){
-  if(!GD.fileId)return;
-  const hasToken=await gdEnsureToken(true);
-  if(!hasToken)return;
-
+  if(!GD.token||!GD.fileId)return;
   try{
     const res=await fetch(`https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,{
       headers:{Authorization:`Bearer ${GD.token}`}
     });
     if(res.status===401||res.status===403){
-      GD.token='';
-      GD.expiresAt=0;
-      GD.connected=false;
-      sessionStorage.removeItem('pl_gat');
-      sessionStorage.removeItem('pl_gexp');
       const ok=await gdEnsureToken(true);
       if(ok)return gdLoadFile(notify);
       return;
@@ -1138,7 +1129,6 @@ async function gdLoadFile(notify=true){
     }
     const data=await res.json();
 
-    // Safety: only replace local data if the Drive file looks like planner data.
     if(data&&typeof data==='object'&&(data.tasks||data.dn||data.wn||data.wg||data.mg||data.mn)){
       D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...data};
       try{localStorage.setItem('pl3',JSON.stringify(D));}catch(e){}
@@ -1225,6 +1215,5 @@ applyTheme();
 gdStatus();
 
 tryLoad();
-// Quietly reconnect Drive after refresh when Google allows it.
 gdAutoConnect();
 </script>
