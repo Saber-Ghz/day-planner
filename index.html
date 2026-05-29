@@ -791,22 +791,28 @@ function rm(){
 }
 function nm(n){const[y,m]=S.mv.split('-').map(Number),d=new Date(y,m-1+n,1);S.mv=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;addSt=null;editSt=null;re();}
 
-// ── Google Drive Integration — FIXED / ROBUST ───────────────────────────
-// Fixes:
-// 1) Drive button always opens OAuth when needed.
-// 2) Shows clear status: Connect / Connecting / Connected / Saving / Failed.
-// 3) Reuses an existing planner-data.json created by this app instead of creating duplicates.
-// 4) Queues saves so quick edits do not get dropped while a save is already running.
+// ── Google Drive Integration — SILENT REFRESH / ROBUST ───────────────
+// What this does:
+// 1) Keeps the current simple GitHub Pages setup.
+// 2) Stores only the Client ID + Drive file ID locally. It does NOT store a permanent refresh token.
+// 3) Uses Google Identity Services silent token refresh when possible.
+// 4) Falls back to a visible Connect button only when Google requires user interaction.
+// 5) Keeps Export / Import as the safety backup path.
 
 const GD={
   clientId: localStorage.getItem('pl_gcid')||'',
-  token: null,
+  token: sessionStorage.getItem('pl_gat')||'',
+  expiresAt: Number(sessionStorage.getItem('pl_gexp')||0),
   fileId: localStorage.getItem('pl_gfid')||'',
   connected: false,
   saving: false,
   pendingSave: false,
+  connecting: false,
+  autoTried: false,
+  tokenClient: null,
   lastError: ''
 };
+GD.connected = !!(GD.token && Date.now() < GD.expiresAt - 60000);
 
 function gdSvg(){
   return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>`;
@@ -823,8 +829,10 @@ function gdSetBtn(label,color,title,dot){
 function gdStatus(){
   if(GD.saving){
     gdSetBtn('Saving…','var(--inf)','Saving to Google Drive…','var(--inf)');
+  }else if(GD.connecting){
+    gdSetBtn('Connecting…','var(--inf)','Connecting to Google Drive…','var(--inf)');
   }else if(GD.connected){
-    gdSetBtn('Drive on','var(--suc)','Drive connected. Click to reconnect/refresh token.','var(--suc)');
+    gdSetBtn('Drive on','var(--suc)','Drive connected. Click to refresh/reconnect.','var(--suc)');
   }else if(GD.clientId){
     gdSetBtn('Connect','var(--inf)','Click to connect to Google Drive',null);
   }else{
@@ -833,10 +841,9 @@ function gdStatus(){
 }
 
 function gdClick(){
-  // If already connected, do NOT disconnect on click. Reconnect/refresh token instead.
-  // This avoids accidental disconnects and makes the button useful.
   if(!GD.clientId){ gdPanelOpen(); return; }
-  gdConnect(true);
+  // User clicked, so use a visible consent/account prompt if Google needs it.
+  gdConnect({prompt:'consent',notify:true,loadFile:true});
 }
 
 function gdPanelOpen(){
@@ -844,7 +851,7 @@ function gdPanelOpen(){
   const inp=document.getElementById('gdClientInput');
   if(inp)inp.value=GD.clientId||'';
 
-  // Replace literal ${location.origin} helper text if present
+  // Replace literal ${location.origin} helper text if present.
   try{
     const panel=document.getElementById('gdPanel');
     if(panel)panel.innerHTML=panel.innerHTML.replace('${location.origin}', location.origin);
@@ -864,7 +871,7 @@ function gdSaveClientId(){
   localStorage.setItem('pl_gcid',GD.clientId);
   gdPanelClose();
   gdStatus();
-  gdConnect(true);
+  gdConnect({prompt:'consent',notify:true,loadFile:true});
 }
 
 function gdLoadScript(){
@@ -879,50 +886,107 @@ function gdLoadScript(){
   });
 }
 
-async function gdConnect(forcePrompt=false){
-  if(!GD.clientId){gdPanelOpen();return;}
+async function gdEnsureToken(silent=true){
+  if(!GD.clientId)return false;
+  if(GD.token && Date.now() < GD.expiresAt - 90000){
+    GD.connected=true;
+    gdStatus();
+    return true;
+  }
+  return gdConnect({prompt:silent?'':'consent',notify:!silent,loadFile:false});
+}
+
+async function gdConnect(opts={}){
+  const prompt = opts.prompt ?? '';
+  const notify = opts.notify ?? false;
+  const loadFile = opts.loadFile ?? false;
+
+  if(!GD.clientId){gdPanelOpen();return false;}
+  if(GD.connecting)return false;
+
   try{
-    gdSetBtn('Connecting…','var(--inf)','Connecting to Google Drive…','var(--inf)');
-    showToast('Connecting to Drive…');
+    GD.connecting=true;
+    gdStatus();
+    if(notify)showToast('Connecting to Drive…');
     await gdLoadScript();
 
-    const client=google.accounts.oauth2.initTokenClient({
-      client_id:GD.clientId,
-      scope:'https://www.googleapis.com/auth/drive.file',
-      callback:async(r)=>{
-        if(r.error){
-          GD.connected=false;
-          GD.lastError=r.error;
+    return await new Promise((resolve)=>{
+      GD.tokenClient=google.accounts.oauth2.initTokenClient({
+        client_id:GD.clientId,
+        scope:'https://www.googleapis.com/auth/drive.file',
+        callback:async(r)=>{
+          GD.connecting=false;
+
+          if(r.error){
+            GD.token='';
+            GD.expiresAt=0;
+            GD.connected=false;
+            GD.lastError=r.error;
+            sessionStorage.removeItem('pl_gat');
+            sessionStorage.removeItem('pl_gexp');
+            gdStatus();
+            // Do not show an error on automatic silent refresh. That would be annoying.
+            if(notify)showToast('⚠ Auth failed: '+r.error);
+            resolve(false);
+            return;
+          }
+
+          GD.token=r.access_token;
+          const expiresIn=Number(r.expires_in||3600);
+          GD.expiresAt=Date.now()+expiresIn*1000;
+          GD.connected=true;
+          GD.lastError='';
+          sessionStorage.setItem('pl_gat',GD.token);
+          sessionStorage.setItem('pl_gexp',String(GD.expiresAt));
           gdStatus();
-          showToast('⚠ Auth failed: '+r.error);
-          return;
+
+          if(loadFile){
+            if(GD.fileId){
+              await gdLoadFile(false);
+            }else{
+              await gdFindExistingFile();
+              if(GD.fileId) await gdLoadFile(false);
+            }
+            await gdSave(true);
+          }
+
+          resolve(true);
         }
-        GD.token=r.access_token;
-        GD.connected=true;
+      });
+
+      // Silent mode works only if Google has an active browser session and third-party/cookie settings allow it.
+      // If it fails, the app stays usable locally and the button shows Connect.
+      try{GD.tokenClient.requestAccessToken({prompt});}
+      catch(e){
+        GD.connecting=false;
+        GD.connected=false;
+        GD.lastError=e.message||String(e);
         gdStatus();
-
-        // If we already know the file ID, load that file first.
-        // If not, search for an existing planner-data.json created by this app before creating a new one.
-        if(GD.fileId){
-          await gdLoadFile(false);
-        }else{
-          await gdFindExistingFile();
-          if(GD.fileId) await gdLoadFile(false);
-        }
-
-        await gdSave(true);
+        if(notify)showToast('⚠ Could not open Google login');
+        resolve(false);
       }
     });
-
-    // Important: for GitHub Pages, use a visible user prompt when user clicks Connect.
-    // Silent prompt can fail invisibly and make it look like the Drive button does nothing.
-    client.requestAccessToken({prompt: forcePrompt ? 'consent' : ''});
   }catch(e){
+    GD.connecting=false;
     GD.connected=false;
     gdStatus();
-    showToast('⚠ Could not load Google login');
+    if(notify)showToast('⚠ Could not load Google login');
     console.error('Google Drive connect failed:',e);
+    return false;
   }
+}
+
+async function gdAutoConnect(){
+  if(!GD.clientId || GD.autoTried)return;
+  GD.autoTried=true;
+  // Wait for the planner to render first. Then quietly try to renew the token.
+  setTimeout(async()=>{
+    const ok=await gdEnsureToken(true);
+    if(ok){
+      if(!GD.fileId) await gdFindExistingFile();
+      if(GD.fileId) await gdLoadFile(false);
+    }
+  },700);
 }
 
 async function gdFindExistingFile(){
@@ -931,6 +995,11 @@ async function gdFindExistingFile(){
     const q=encodeURIComponent("name='planner-data.json' and trashed=false");
     const url=`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`;
     const res=await fetch(url,{headers:{Authorization:`Bearer ${GD.token}`}});
+    if(res.status===401||res.status===403){
+      const ok=await gdEnsureToken(true);
+      if(ok)return gdFindExistingFile();
+      return;
+    }
     if(!res.ok)return;
     const data=await res.json();
     if(data.files&&data.files.length){
@@ -943,8 +1012,12 @@ async function gdFindExistingFile(){
 }
 
 async function gdSave(notify=false){
-  if(!GD.token||!GD.connected){
+  if(!GD.clientId){gdStatus();return;}
+
+  const hasToken=await gdEnsureToken(true);
+  if(!hasToken){
     gdStatus();
+    if(notify)showToast('⚠ Click Connect for Drive save');
     return;
   }
 
@@ -967,23 +1040,42 @@ async function gdSave(notify=false){
         body
       });
     }else{
-      const meta=JSON.stringify({name:'planner-data.json',mimeType:'application/json'});
-      const fd=new FormData();
-      fd.append('metadata',new Blob([meta],{type:'application/json'}));
-      fd.append('file',new Blob([body],{type:'application/json'}));
-      res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
-        method:'POST',
-        headers:{Authorization:`Bearer ${GD.token}`},
-        body:fd
-      });
+      await gdFindExistingFile();
+      if(GD.fileId){
+        res=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,{
+          method:'PATCH',
+          headers:{Authorization:`Bearer ${GD.token}`,'Content-Type':'application/json'},
+          body
+        });
+      }else{
+        const meta=JSON.stringify({name:'planner-data.json',mimeType:'application/json'});
+        const fd=new FormData();
+        fd.append('metadata',new Blob([meta],{type:'application/json'}));
+        fd.append('file',new Blob([body],{type:'application/json'}));
+        res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
+          method:'POST',
+          headers:{Authorization:`Bearer ${GD.token}`},
+          body:fd
+        });
+      }
     }
 
     if(res.status===401||res.status===403){
-      GD.token=null;
+      GD.token='';
+      GD.expiresAt=0;
       GD.connected=false;
+      sessionStorage.removeItem('pl_gat');
+      sessionStorage.removeItem('pl_gexp');
+
+      const ok=await gdEnsureToken(true);
+      if(ok){
+        GD.saving=false;
+        return gdSave(notify);
+      }
+
       GD.lastError='session expired';
       gdStatus();
-      showToast('⚠ Drive session expired — click Connect');
+      showToast('⚠ Drive needs reconnect — click Connect');
       return;
     }
 
@@ -1019,11 +1111,24 @@ async function gdSave(notify=false){
 }
 
 async function gdLoadFile(notify=true){
-  if(!GD.token||!GD.fileId)return;
+  if(!GD.fileId)return;
+  const hasToken=await gdEnsureToken(true);
+  if(!hasToken)return;
+
   try{
     const res=await fetch(`https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,{
       headers:{Authorization:`Bearer ${GD.token}`}
     });
+    if(res.status===401||res.status===403){
+      GD.token='';
+      GD.expiresAt=0;
+      GD.connected=false;
+      sessionStorage.removeItem('pl_gat');
+      sessionStorage.removeItem('pl_gexp');
+      const ok=await gdEnsureToken(true);
+      if(ok)return gdLoadFile(notify);
+      return;
+    }
     if(!res.ok){
       if(res.status===404){
         localStorage.removeItem('pl_gfid');
