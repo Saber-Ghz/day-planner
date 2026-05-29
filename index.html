@@ -791,66 +791,87 @@ function rm(){
 }
 function nm(n){const[y,m]=S.mv.split('-').map(Number),d=new Date(y,m-1+n,1);S.mv=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;addSt=null;editSt=null;re();}
 
-// ── Google Drive Integration ───────────────────────────────────────────
+// ── Google Drive Integration — FIXED / ROBUST ───────────────────────────
+// Fixes:
+// 1) Drive button always opens OAuth when needed.
+// 2) Shows clear status: Connect / Connecting / Connected / Saving / Failed.
+// 3) Reuses an existing planner-data.json created by this app instead of creating duplicates.
+// 4) Queues saves so quick edits do not get dropped while a save is already running.
+
 const GD={
   clientId: localStorage.getItem('pl_gcid')||'',
   token: null,
   fileId: localStorage.getItem('pl_gfid')||'',
   connected: false,
-  saving: false
+  saving: false,
+  pendingSave: false,
+  lastError: ''
 };
 
-function gdStatus(){
+function gdSvg(){
+  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>`;
+}
+
+function gdSetBtn(label,color,title,dot){
   const btn=document.getElementById('gdBtn');
   if(!btn)return;
-  if(GD.connected){
-    btn.innerHTML=`<span style="width:7px;height:7px;border-radius:50%;background:var(--suc);display:inline-block;flex-shrink:0"></span>Drive`;
-    btn.style.color='var(--suc)';
-    btn.title='Drive connected — click to disconnect';
-  } else if(GD.clientId){
-    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>Drive`;
-    btn.style.color='var(--tt)';
-    btn.title='Click to connect to Drive';
-  } else {
-    btn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>Drive`;
-    btn.style.color='var(--tt)';
-    btn.title='Set up Google Drive sync';
+  btn.innerHTML=(dot?`<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0"></span>`:gdSvg())+label;
+  btn.style.color=color;
+  btn.title=title;
+}
+
+function gdStatus(){
+  if(GD.saving){
+    gdSetBtn('Saving…','var(--inf)','Saving to Google Drive…','var(--inf)');
+  }else if(GD.connected){
+    gdSetBtn('Drive on','var(--suc)','Drive connected. Click to reconnect/refresh token.','var(--suc)');
+  }else if(GD.clientId){
+    gdSetBtn('Connect','var(--inf)','Click to connect to Google Drive',null);
+  }else{
+    gdSetBtn('Drive','var(--tt)','Set up Google Drive sync',null);
   }
 }
 
 function gdClick(){
-  if(GD.connected){
-    if(confirm('Disconnect Google Drive? Your local data stays intact.')){
-      GD.token=null;GD.connected=false;GD.fileId='';GD.clientId='';
-      localStorage.removeItem('pl_gcid');localStorage.removeItem('pl_gfid');
-      gdStatus();showToast('Drive disconnected');
-    }
-    return;
-  }
-  if(GD.clientId){ gdConnect(); return; }
-  gdPanelOpen();
+  // If already connected, do NOT disconnect on click. Reconnect/refresh token instead.
+  // This avoids accidental disconnects and makes the button useful.
+  if(!GD.clientId){ gdPanelOpen(); return; }
+  gdConnect(true);
 }
 
 function gdPanelOpen(){
   const p=document.getElementById('gdPanel');if(p)p.style.display='block';
-  // Fill origin dynamically
   const inp=document.getElementById('gdClientInput');
   if(inp)inp.value=GD.clientId||'';
+
+  // Replace literal ${location.origin} helper text if present
+  try{
+    const panel=document.getElementById('gdPanel');
+    if(panel)panel.innerHTML=panel.innerHTML.replace('${location.origin}', location.origin);
+  }catch(e){}
 }
 function gdPanelClose(){ const p=document.getElementById('gdPanel');if(p)p.style.display='none'; }
 
 function gdSaveClientId(){
   const inp=document.getElementById('gdClientInput');
   if(!inp||!inp.value.trim()){showToast('⚠ Paste your Client ID first');return;}
-  GD.clientId=inp.value.trim();
+  const v=inp.value.trim();
+  if(!v.endsWith('.apps.googleusercontent.com')){
+    showToast('⚠ This does not look like a Google Client ID');
+    return;
+  }
+  GD.clientId=v;
   localStorage.setItem('pl_gcid',GD.clientId);
   gdPanelClose();
-  gdConnect();
+  gdStatus();
+  gdConnect(true);
 }
 
 function gdLoadScript(){
   return new Promise((res,rej)=>{
     if(window.google?.accounts?.oauth2){res();return;}
+    const existing=document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
+    if(existing){existing.addEventListener('load',res,{once:true});existing.addEventListener('error',rej,{once:true});return;}
     const s=document.createElement('script');
     s.src='https://accounts.google.com/gsi/client';
     s.onload=res;s.onerror=rej;
@@ -858,30 +879,84 @@ function gdLoadScript(){
   });
 }
 
-async function gdConnect(){
+async function gdConnect(forcePrompt=false){
   if(!GD.clientId){gdPanelOpen();return;}
   try{
+    gdSetBtn('Connecting…','var(--inf)','Connecting to Google Drive…','var(--inf)');
     showToast('Connecting to Drive…');
     await gdLoadScript();
+
     const client=google.accounts.oauth2.initTokenClient({
       client_id:GD.clientId,
       scope:'https://www.googleapis.com/auth/drive.file',
-      callback:(r)=>{
-        if(r.error){showToast('⚠ Auth failed: '+r.error);return;}
-        GD.token=r.access_token;GD.connected=true;
+      callback:async(r)=>{
+        if(r.error){
+          GD.connected=false;
+          GD.lastError=r.error;
+          gdStatus();
+          showToast('⚠ Auth failed: '+r.error);
+          return;
+        }
+        GD.token=r.access_token;
+        GD.connected=true;
         gdStatus();
-        gdSave(true);
+
+        // If we already know the file ID, load that file first.
+        // If not, search for an existing planner-data.json created by this app before creating a new one.
+        if(GD.fileId){
+          await gdLoadFile(false);
+        }else{
+          await gdFindExistingFile();
+          if(GD.fileId) await gdLoadFile(false);
+        }
+
+        await gdSave(true);
       }
     });
-    client.requestAccessToken({prompt:GD.fileId?'none':''});
+
+    // Important: for GitHub Pages, use a visible user prompt when user clicks Connect.
+    // Silent prompt can fail invisibly and make it look like the Drive button does nothing.
+    client.requestAccessToken({prompt: forcePrompt ? 'consent' : ''});
   }catch(e){
-    showToast('⚠ Could not load Google — try opening this file directly in your browser');
+    GD.connected=false;
+    gdStatus();
+    showToast('⚠ Could not load Google login');
+    console.error('Google Drive connect failed:',e);
+  }
+}
+
+async function gdFindExistingFile(){
+  if(!GD.token)return;
+  try{
+    const q=encodeURIComponent("name='planner-data.json' and trashed=false");
+    const url=`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`;
+    const res=await fetch(url,{headers:{Authorization:`Bearer ${GD.token}`}});
+    if(!res.ok)return;
+    const data=await res.json();
+    if(data.files&&data.files.length){
+      GD.fileId=data.files[0].id;
+      localStorage.setItem('pl_gfid',GD.fileId);
+    }
+  }catch(e){
+    console.warn('Could not search existing Drive file',e);
   }
 }
 
 async function gdSave(notify=false){
-  if(!GD.token||!GD.connected||GD.saving)return;
+  if(!GD.token||!GD.connected){
+    gdStatus();
+    return;
+  }
+
+  // If a save is already in progress, remember to run another one afterward.
+  if(GD.saving){
+    GD.pendingSave=true;
+    return;
+  }
+
   GD.saving=true;
+  gdStatus();
+
   const body=JSON.stringify(D,null,2);
   try{
     let res;
@@ -902,30 +977,76 @@ async function gdSave(notify=false){
         body:fd
       });
     }
-    if(res.status===401){GD.token=null;GD.connected=false;gdStatus();showToast('⚠ Drive session expired — reconnect');GD.saving=false;return;}
-    if(!GD.fileId&&res.ok){
-      const d=await res.json();
-      GD.fileId=d.id;localStorage.setItem('pl_gfid',GD.fileId);
+
+    if(res.status===401||res.status===403){
+      GD.token=null;
+      GD.connected=false;
+      GD.lastError='session expired';
+      gdStatus();
+      showToast('⚠ Drive session expired — click Connect');
+      return;
     }
-    if(notify&&res.ok)showToast('✓ Saved to Google Drive');
-  }catch(e){showToast('⚠ Drive save failed');}
-  GD.saving=false;
+
+    if(!res.ok){
+      const errText=await res.text().catch(()=>String(res.status));
+      GD.lastError=errText;
+      gdStatus();
+      showToast('⚠ Drive save failed');
+      console.error('Drive save failed:',res.status,errText);
+      return;
+    }
+
+    if(!GD.fileId){
+      const d=await res.json();
+      GD.fileId=d.id;
+      localStorage.setItem('pl_gfid',GD.fileId);
+    }
+
+    if(notify)showToast('✓ Saved to Google Drive');
+  }catch(e){
+    GD.lastError=e.message||String(e);
+    showToast('⚠ Drive save failed');
+    console.error('Drive save failed:',e);
+  }finally{
+    GD.saving=false;
+    gdStatus();
+
+    if(GD.pendingSave){
+      GD.pendingSave=false;
+      setTimeout(()=>gdSave(false),150);
+    }
+  }
 }
 
-async function gdLoadFile(){
+async function gdLoadFile(notify=true){
   if(!GD.token||!GD.fileId)return;
   try{
     const res=await fetch(`https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,{
       headers:{Authorization:`Bearer ${GD.token}`}
     });
-    if(!res.ok)return;
+    if(!res.ok){
+      if(res.status===404){
+        localStorage.removeItem('pl_gfid');
+        GD.fileId='';
+      }
+      return;
+    }
     const data=await res.json();
-    D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...data};
-    re();showToast('✓ Loaded from Google Drive');
-  }catch(e){}
+
+    // Safety: only replace local data if the Drive file looks like planner data.
+    if(data&&typeof data==='object'&&(data.tasks||data.dn||data.wn||data.wg||data.mg||data.mn)){
+      D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...data};
+      try{localStorage.setItem('pl3',JSON.stringify(D));}catch(e){}
+      re();
+      if(notify)showToast('✓ Loaded from Google Drive');
+    }
+  }catch(e){
+    console.warn('Drive load failed:',e);
+  }
 }
 
 // ── Export / Import
+
 function exportData(){
   const json=JSON.stringify(D,null,2);
   const blob=new Blob([json],{type:'application/json'});
