@@ -1,3 +1,4 @@
+<!-- V8.2 neutral search centered modal -->
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
@@ -198,12 +199,115 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 /* Date picker */
 .date-tap{position:relative;display:inline-block;cursor:pointer;text-align:center}
 .date-tap input[type=date]{position:absolute;inset:0;opacity:0;width:100%;cursor:pointer;font-size:16px}
+
+/* v3 productivity helpers */
+.topbtn{border:none;background:var(--bg3);cursor:pointer;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--st);font-family:var(--fnt);display:inline-flex;align-items:center;gap:4px;transition:all .15s;white-space:nowrap}
+.topbtn:hover{background:var(--inf-bg);color:var(--inf)}
+.topbtn:disabled{opacity:.35;cursor:default;background:var(--bg3)!important;color:var(--st)!important}
+.topbtn.on{background:var(--inf-bg);color:var(--inf)}
+.quickbar{display:flex;gap:8px;align-items:center;background:var(--bg2);border-radius:16px;box-shadow:var(--shadow);padding:10px 12px;margin:0 0 18px}
+.quickbar input{border:none;background:transparent;color:var(--pt);font-size:15px;outline:none;font-family:var(--fnt);flex:1;min-width:0}
+.quickbar input::placeholder{color:var(--tt)}
+.quick-actions{display:flex;gap:6px;align-items:center;flex-shrink:0}
+.qbtn{border:none;border-radius:12px;padding:8px 12px;font-size:13px;font-weight:800;cursor:pointer;font-family:var(--fnt);white-space:nowrap}
+.qbtn.high{background:var(--dan-bg);color:var(--dan)}
+.qbtn.med{background:var(--war-bg);color:var(--war)}
+.qbtn.low{background:var(--suc-bg);color:var(--suc)}
+.qbtn:hover{filter:brightness(.97)}
+.focus-card{background:linear-gradient(135deg,var(--inf-bg),transparent);border:1px solid var(--bd);border-radius:18px;padding:12px 14px;margin:0 0 14px;box-shadow:var(--shadow)}
+.focus-row{display:flex;align-items:center;gap:9px;padding:8px 0;border-top:.5px solid var(--bd)}
+.focus-row:first-of-type{border-top:none}
+.carried-pill,.repeat-pill,.focus-pill{font-size:10px;font-weight:700;border-radius:20px;padding:2px 7px;white-space:nowrap;background:var(--bg3);color:var(--st)}
+.focus-pill{background:var(--inf-bg);color:var(--inf)}
+.eod-card,.backup-card,.modal-card{background:var(--bg2);border-radius:18px;box-shadow:var(--shadow);padding:14px;margin:12px 0;border:1px solid var(--bd)}
+.backup-card{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--war-bg)}
+.search-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:9998;display:flex;align-items:flex-start;justify-content:center;padding:70px 16px 16px}
+.search-modal{width:min(640px,100%);max-height:80vh;overflow:auto;background:var(--bg2);border-radius:20px;box-shadow:0 18px 60px rgba(0,0,0,.28);padding:14px;border:1px solid var(--bd)}
+.search-modal input,.modal-card input,.modal-card select,.modal-card textarea{width:100%;border:1px solid var(--bd2);border-radius:12px;background:var(--bg);color:var(--pt);font-size:15px;font-family:var(--fnt);padding:10px;outline:none;margin-top:8px}
+.search-result{display:block;width:100%;text-align:left;border:none;background:transparent;color:var(--pt);padding:10px;border-radius:12px;cursor:pointer;font-family:var(--fnt);border-bottom:.5px solid var(--bd)}
+.search-result:hover{background:var(--bg3)}
+.small-muted{font-size:12px;color:var(--st)}
+@media(max-width:700px){.planner-top{flex-direction:column;align-items:stretch!important;gap:10px}.planner-actions{flex-wrap:wrap}.tabs{width:100%;display:grid;grid-template-columns:repeat(3,1fr)}.tab{justify-content:center}}
+
+
+/* v6 cleaner UX */
+.planner-top{position:sticky;top:0;z-index:50;background:linear-gradient(var(--bg) 78%,rgba(242,242,247,0));padding-top:8px;padding-bottom:10px;margin-bottom:1rem!important;gap:12px}
+@media(prefers-color-scheme:dark){.planner-top{background:linear-gradient(var(--bg) 78%,rgba(0,0,0,0))}}
+.planner-actions{flex-wrap:nowrap!important;gap:6px!important}
+.topbtn.icon-only{width:34px;height:34px;justify-content:center;padding:0;border-radius:999px;font-size:14px}
+.search-btn{padding:7px 12px!important;border-radius:999px!important;font-size:13px!important;font-weight:700!important;color:var(--st)!important;background:var(--bg3)!important;gap:6px!important}
+.search-btn svg{color:var(--st)!important}
+.search-btn:hover{background:var(--bg2)!important;color:var(--pt)!important;filter:none}
+.search-btn:hover svg{color:var(--pt)!important}
+.more-wrap{position:relative}
+.more-menu{position:absolute;right:0;top:42px;width:210px;background:var(--bg2);border:1px solid var(--bd);border-radius:16px;box-shadow:0 16px 45px rgba(0,0,0,.18);padding:6px;z-index:500}
+.more-menu .cmi{font-size:13px;padding:10px}
+.summary-card{display:flex;align-items:center;justify-content:center;gap:7px;margin:-2px 0 14px;color:var(--st);font-size:13px;font-weight:650;line-height:1.2}
+.sum-item{display:inline-flex;align-items:center;gap:4px;background:transparent;border:none;padding:0;text-align:center}
+.sum-item:not(:last-child)::after{content:'·';color:var(--tt);margin-left:7px;font-weight:700}
+.sum-num{font-size:13px;font-weight:800;color:var(--pt);line-height:1}
+.sum-lab{font-size:13px;font-weight:650;color:var(--st);text-transform:none;letter-spacing:0;margin-top:0}
+.summary-card.is-simple .sum-item:not(:first-child){display:none}
+.carried-card{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--shadow);padding:0;margin:0 0 14px;overflow:hidden}
+.carried-card .sh{margin:10px 14px 8px}
+.starbtn{border:none;background:none;color:var(--tt);cursor:pointer;width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0}
+.starbtn.on{color:var(--inf);background:var(--inf-bg)}
+.starbtn:hover{background:var(--bg3);color:var(--inf)}
+.row-actions{opacity:0;display:flex;gap:2px;align-items:center;transition:opacity .1s;flex-shrink:0}
+.block:hover .row-actions,.goalbk:hover .row-actions{opacity:1}
+.fab{position:fixed;right:28px;bottom:28px;width:58px;height:58px;border:none;border-radius:999px;background:var(--inf);color:white;box-shadow:0 12px 36px rgba(0,122,255,.35);font-size:30px;font-weight:500;cursor:pointer;z-index:700;display:flex;align-items:center;justify-content:center;line-height:1;transition:transform .12s,opacity .12s}
+.fab:hover{transform:translateY(-2px)}
+.add-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.26);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px}
+.add-modal{width:min(520px,100%);background:var(--bg2);border:1px solid var(--bd);border-radius:24px;box-shadow:0 20px 70px rgba(0,0,0,.28);padding:16px;transform:translateY(-4vh)}
+.add-modal input{width:100%;border:1px solid var(--bd2);border-radius:16px;background:var(--bg);color:var(--pt);font-size:18px;font-family:var(--fnt);padding:14px;outline:none;margin:8px 0 12px}
+.add-prio-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.add-prio-row .qbtn{padding:12px 8px;border-radius:16px;font-size:14px}
+.add-where{display:flex;gap:6px;margin-bottom:10px;background:var(--bg3);border-radius:14px;padding:3px}
+.add-where button{flex:1;border:none;background:transparent;color:var(--st);font-family:var(--fnt);font-size:12px;font-weight:800;border-radius:11px;padding:8px;cursor:pointer}
+.add-where button.on{background:var(--bg2);color:var(--inf);box-shadow:var(--shadow)}
+.empty-day{background:var(--bg2);border-radius:18px;border:1px dashed var(--bd2);padding:22px;text-align:center;color:var(--st);margin:12px 0}
+@media(max-width:700px){.planner-top{position:static}.planner-actions{justify-content:flex-end}.topbtn.clean-label{display:none}.search-btn span{display:none}.search-btn{width:38px;height:38px;padding:0!important;justify-content:center}.fab{right:18px;bottom:18px}.add-backdrop{align-items:flex-end}.add-modal{transform:none}}
+
+/* v8.1 softer Done Today */
+.done-today-soft{margin-top:10px;opacity:.82}
+.done-today-soft .sh{font-size:10px;font-weight:600;color:var(--tt);letter-spacing:.07em;margin:14px 0 5px 4px}
+.done-today-soft .dzone{background:transparent!important;box-shadow:none!important;border:1px solid var(--bd);border-radius:12px;overflow:visible;position:relative;z-index:2}
+.done-today-soft .block{min-height:34px;padding:7px 12px;background:transparent!important;opacity:.72}
+.done-today-soft .block:hover{opacity:.9;background:var(--bg3)!important}
+.done-today-soft .btxt.done{color:var(--tt);font-size:14px}
+.done-today-soft input[type=checkbox]{width:18px;height:18px}
+.done-today-soft .starbtn{opacity:.45}
+.done-today-soft .done-count{font-size:10px;font-weight:600;color:var(--tt);background:transparent;padding:0 2px;border-radius:0;margin-left:4px}
+
+/* v8.2 fix Done Today menu clipping */
+.done-today-soft .cmenu{z-index:900;right:8px;top:calc(100% + 4px)}
+.done-today-soft .row-actions{position:relative;z-index:5}
+.done-today-soft .block:has(.cmenu){opacity:1;z-index:20}
+.done-today-soft .block:has(.cmenu) .row-actions{opacity:1}
+
+
+/* v8.2 applied fixes: neutral search + centered desktop add modal */
+.search-btn,.search-btn:visited,.search-btn:focus,.search-btn:active{
+  background:var(--bg3)!important;
+  color:var(--st)!important;
+  box-shadow:none!important;
+}
+.search-btn svg{color:var(--st)!important;stroke:currentColor!important}
+.search-btn:hover{background:var(--bd)!important;color:var(--pt)!important;filter:none!important}
+.search-btn:hover svg{color:var(--pt)!important}
+.add-backdrop{align-items:center!important;justify-content:center!important}
+.add-modal{transform:translateY(-4vh)!important}
+@media(max-width:700px){
+  .add-backdrop{align-items:flex-end!important;justify-content:center!important}
+  .add-modal{transform:none!important}
+}
+
 </style>
 
 <div style="padding:1.25rem 0 2.5rem;background:var(--bg);min-height:100%;font-family:var(--fnt)">
 <div style="max-width:640px;margin:0 auto;padding:0 1rem">
 
-<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
+<div class="planner-top" style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem">
   <div class="tabs">
     <button class="tab on" data-v="daily" onclick="psv('daily')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="6" r="1.5" fill="currentColor" stroke="none"/><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="5" cy="18" r="1.5" fill="currentColor" stroke="none"/><path d="M9 6h11M9 12h11M9 18h11"/></svg>Daily
@@ -215,19 +319,15 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1" fill="currentColor" stroke="none"/></svg>Monthly
     </button>
   </div>
-  <div style="display:flex;align-items:center;gap:6px">
-    <button onclick="exportData()" title="Export backup" style="border:none;background:var(--bg3);cursor:pointer;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--st);font-family:var(--fnt);display:inline-flex;align-items:center;gap:4px;transition:all .15s">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 11l4 4 4-4"/><path d="M3 19h18"/></svg>Export
-    </button>
-    <button onclick="importData()" title="Import backup" style="border:none;background:var(--bg3);cursor:pointer;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--st);font-family:var(--fnt);display:inline-flex;align-items:center;gap:4px;transition:all .15s">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21V9M8 13l4-4 4 4"/><path d="M3 5h18"/></svg>Import
-    </button>
-    <button id="gdBtn" onclick="gdClick()" style="border:none;background:var(--bg3);cursor:pointer;border-radius:20px;padding:5px 10px;font-size:12px;font-weight:600;color:var(--tt);font-family:var(--fnt);display:inline-flex;align-items:center;gap:5px;transition:all .15s">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>Drive
-    </button>
-    <button id="themeBtn" onclick="toggleTheme()" title="Toggle theme" style="border:none;background:var(--bg3);cursor:pointer;border-radius:20px;padding:5px 10px;font-size:13px;color:var(--st);font-family:var(--fnt);display:inline-flex;align-items:center;gap:5px;transition:all .15s;font-weight:500">
-      <span id="themeIco">🌙</span>
-    </button>
+  <div class="planner-actions" style="display:flex;align-items:center;gap:6px">
+    <button id="undoBtn" class="topbtn clean-label" onclick="undoLast()" title="Undo last change" disabled>Undo</button>
+    <button class="topbtn clean-label" onclick="goToday()" title="Go to today">Today</button>
+    <button class="topbtn search-btn" onclick="openSearch()" title="Search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span>Search</span></button>
+    <button id="themeBtn" class="topbtn icon-only" onclick="toggleTheme()" title="Toggle theme"><span id="themeIco">🌙</span></button>
+    <div class="more-wrap">
+      <button class="topbtn icon-only" onclick="toggleMoreMenu(event)" title="More">•••</button>
+      <div id="moreMenu" class="more-menu" style="display:none"></div>
+    </div>
     <span id="svind">
       <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5L19 7"/></svg>Saved
     </span>
@@ -235,23 +335,6 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 </div>
 
 <div id="ld" style="padding:3rem 0;text-align:center;color:var(--tt);font-size:14px">Loading…</div>
-<div id="gdPanel" style="display:none;background:var(--bg2);border-radius:var(--rl);box-shadow:var(--shadow);padding:20px;margin-bottom:16px;border:1px solid var(--bd)">
-  <div style="font-size:16px;font-weight:700;color:var(--pt);margin-bottom:4px">Connect Google Drive</div>
-  <div style="font-size:13px;color:var(--st);margin-bottom:16px;line-height:1.5">Your planner will auto-save to Drive after every change. One-time setup — 5 minutes.</div>
-  <div style="font-size:12px;font-weight:600;color:var(--tt);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Setup steps</div>
-  <div style="font-size:13px;color:var(--st);line-height:1.8;margin-bottom:16px">
-    1. Go to <a href="https://console.cloud.google.com" target="_blank" style="color:var(--inf)">console.cloud.google.com</a><br>
-    2. Create a project → Enable <strong style="color:var(--pt)">Google Drive API</strong><br>
-    3. Credentials → Create <strong style="color:var(--pt)">OAuth 2.0 Client ID</strong> (Web application)<br>
-    4. Add <code style="background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:11px">${location.origin}</code> to Authorized JavaScript origins<br>
-    5. Copy the Client ID and paste below
-  </div>
-  <input id="gdClientInput" type="text" placeholder="Paste Client ID here…" style="width:100%;font-size:13px;border:1px solid var(--bd2);border-radius:var(--r);padding:9px 12px;background:var(--bg);color:var(--pt);outline:none;font-family:var(--fnt);margin-bottom:10px">
-  <div style="display:flex;gap:8px">
-    <button onclick="gdSaveClientId()" style="flex:1;background:var(--inf);color:#fff;border:none;border-radius:var(--r);padding:9px;font-size:13px;font-weight:600;cursor:pointer;font-family:var(--fnt)">Connect</button>
-    <button onclick="gdPanelClose()" style="background:var(--bg3);color:var(--st);border:none;border-radius:var(--r);padding:9px 16px;font-size:13px;cursor:pointer;font-family:var(--fnt)">Cancel</button>
-  </div>
-</div>
 <div id="pa" style="display:none">
   <div id="vd"></div>
   <div id="vw" style="display:none"></div>
@@ -259,9 +342,11 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 </div>
 </div>
 </div>
+<button class="fab" onclick="openAddModal()" title="Add task">+</button>
 
 <script>
-const TD=(()=>{const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;})();
+function todayKey(){const d=new Date();return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+let TD=todayKey();
 const MN=['January','February','March','April','May','June','July','August','September','October','November','December'];
 const MNS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 const DN=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'];
@@ -288,6 +373,7 @@ const SVG={
   'target':`<circle cx='12' cy='12' r='9'/><circle cx='12' cy='12' r='4'/><circle cx='12' cy='12' r='1' fill='currentColor' stroke='none'/>`,
   'download':`<path d='M12 3v12M8 11l4 4 4-4'/><path d='M3 19h18'/>`,
   'upload':`<path d='M12 21V9M8 13l4-4 4 4'/><path d='M3 5h18'/>`,
+  'search':`<circle cx='11' cy='11' r='7'/><path d='M20 20l-3.5-3.5'/>`,
 };
 function ic(n,sz=14,st=''){
   return`<svg xmlns='http://www.w3.org/2000/svg' width='${sz}' height='${sz}' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round' style='vertical-align:-2px;flex-shrink:0;${st}' aria-hidden='true'>${SVG[n]||''}</svg>`;
@@ -300,44 +386,110 @@ function monOf(s){const d=pd(s);const v=d.getDay()||7;d.setDate(d.getDate()-v+1)
 function mk(s){return s.slice(0,7);}
 function ec(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-let D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{}};
+let D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{}};
 let uid=0;const nid=()=>`${Date.now()}${++uid}`;
 const tf=d=>D.tasks[d]||(D.tasks[d]=[]);
 const gf=m=>D.mg[m]||(D.mg[m]=[]);
 const wgf=w=>D.wg[w]||(D.wg[w]=[]);
+function normalizeData(d){d.tasks=d.tasks||{};d.dn=d.dn||{};d.wn=d.wn||{};d.wg=d.wg||{};d.mg=d.mg||{};d.mn=d.mn||{};d.ui=d.ui||{};d.recurring=Array.isArray(d.recurring)?d.recurring:[];d.review=d.review||{};return d;}
+function dayShort(s){const d=pd(s);return `${MNS[d.getMonth()]} ${d.getDate()}`;}
+function allTasks(){return Object.keys(D.tasks||{}).flatMap(dt=>(D.tasks[dt]||[]).map(t=>({...t,date:dt})));}
 let svt=null;
 let editSt=null,menuSt=null,movePn=null,addSt=null;
 let collapsed={}; // section collapse state, keyed by priority+context
+let undoStack=[];
+let lastDJson='';
+
+function updateUndoBtn(){
+  const b=document.getElementById('undoBtn');
+  if(b)b.disabled=undoStack.length===0;
+}
+function undoLast(){
+  const prev=undoStack.pop();
+  if(!prev){updateUndoBtn();return;}
+  try{D=normalizeData(JSON.parse(prev));}
+  catch(e){updateUndoBtn();return;}
+  lastDJson=JSON.stringify(D);
+  try{if(window.storage)window.storage.set('pl3',lastDJson);}catch(e){}
+  try{localStorage.setItem('pl3',lastDJson);}catch(e){}
+  updateUndoBtn();re();showToast('Undone');
+}
 
 function dosave2(){
   const j=JSON.stringify(D);
+  if(lastDJson && j!==lastDJson){undoStack.push(lastDJson);if(undoStack.length>25)undoStack.shift();}
+  lastDJson=j;updateUndoBtn();
   try{if(window.storage)window.storage.set('pl3',j);}catch(e){}
   try{localStorage.setItem('pl3',j);}catch(e){}
   const el=document.getElementById('svind');
   if(el){el.style.opacity='1';clearTimeout(svt);svt=setTimeout(()=>el.style.opacity='0',2000);}
-  // Auto-save to Drive if connected
-  if(GD.connected) gdSave();
 }
+
+function carryForwardUnfinishedTasks(){
+  const today=todayKey();
+  D.tasks=D.tasks||{};
+  const target=tf(today);
+  let changed=false;
+
+  Object.keys(D.tasks).sort().forEach(dt=>{
+    if(dt>=today)return;
+    const arr=D.tasks[dt]||[];
+    if(!arr.length)return;
+
+    const done=[];
+    const unfinished=[];
+    arr.forEach(t=>{
+      if(t&&t.done)done.push(t);
+      else if(t)unfinished.push(t);
+    });
+
+    if(unfinished.length){
+      unfinished.forEach(t=>{t.carriedFrom=t.carriedFrom||dt;});
+      target.push(...unfinished);
+      D.tasks[dt]=done;
+      changed=true;
+    }
+  });
+  return changed;
+}
+
+function dailyMaintenance(render=true){
+  const newToday=todayKey();
+  const oldToday=TD;
+  const dayChanged=newToday!==oldToday;
+
+  if(dayChanged){
+    TD=newToday;
+    if(S.d===oldToday)S.d=TD;
+    if(S.mv===mk(oldToday))S.mv=mk(TD);
+  }
+
+  const carried=carryForwardUnfinishedTasks();
+  const rec=generateRecurringTasks();
+  if(carried||rec)dosave2();
+  if(render&&(dayChanged||carried||rec))re();
+}
+
 function showApp(){
   const ld=document.getElementById('ld'),pa=document.getElementById('pa');
   if(ld)ld.style.display='none';if(pa)pa.style.display='';
-  try{re();}catch(e){if(pa)pa.innerHTML='<p style="color:var(--dan);padding:1rem">Error.</p>';}
+  try{dailyMaintenance(false);re();}catch(e){if(pa)pa.innerHTML='<p style="color:var(--dan);padding:1rem">Error.</p>';}
 }
 function tryLoad(){
   let done=false;
-  const finish=()=>{if(!done){done=true;showApp();}};
+  const finish=()=>{if(!done){done=true;lastDJson=JSON.stringify(D);updateUndoBtn();showApp();}};
   setTimeout(finish,3000);
   try{
     if(window.storage){
       Promise.resolve(window.storage.get('pl3')).then(r=>{
-        try{if(r&&r.value){const p=JSON.parse(r.value);D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...p};}}catch(e){}
+        try{if(r&&r.value){const p=JSON.parse(r.value);D=normalizeData({tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{},...p});}}catch(e){}
         finish();
       }).catch(()=>{
-        try{const r=localStorage.getItem('pl3');if(r)D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...JSON.parse(r)};}catch(e){}
+        try{const r=localStorage.getItem('pl3');if(r)D=normalizeData({tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{},...JSON.parse(r)});}catch(e){}
         finish();
       });
     }else{
-      try{const r=localStorage.getItem('pl3');if(r)D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...JSON.parse(r)};}catch(e){}
+      try{const r=localStorage.getItem('pl3');if(r)D=normalizeData({tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{},...JSON.parse(r)});}catch(e){}
       finish();
     }
   }catch(e){finish();}
@@ -585,6 +737,125 @@ function mvWG(id,fw,tw){
   const[g]=arr.splice(fi,1);wgf(tw).push(g);dosave2();re();
 }
 
+
+function quickAdd(priority='med'){
+  const el=document.getElementById('quickAdd'); if(!el)return;
+  const text=(el.value||'').trim().replace(/\s+/g,' ');
+  if(!text)return;
+  tf(S.d||TD).push({id:nid(),text,priority,done:false});
+  el.value=''; dosave2(); re();
+}
+function quickAddKey(e){if(e.key==='Enter'){e.preventDefault();quickAdd('med');} if(e.key==='Escape'){e.target.value='';}}
+function goToday(){S.d=TD;S.mv=mk(TD);addSt=null;editSt=null;menuSt=null;movePn=null;re();}
+function toggleHideDone(){D.ui.hideDone=!D.ui.hideDone;dosave2();re();}
+function updateHideBtn(){renderMoreMenu();}
+function toggleFocus(ctx,id){const t=tf(ctx).find(x=>x.id===id); if(t){t.focus=!t.focus;menuSt=null;dosave2();re();}}
+function focusHTML(dt){
+  const items=tf(dt).filter(t=>t.focus&&!t.done);
+  if(!items.length)return'';
+  return `<div class="focus-card"><div class="sh" style="margin:0 0 6px 0;color:var(--inf)">${ic('target',13)}&thinsp;Daily focus</div>${items.map(t=>`<div class="focus-row"><input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${dt}','${t.id}')"><span class="btxt" onclick="startEdit('${t.id}','${dt}','task')">${ec(t.text)}</span><button class="bact" onclick="toggleFocus('${dt}','${t.id}')" title="Remove from focus">${ic('x',13)}</button></div>`).join('')}</div>`;
+}
+function carriedHTML(t){
+  const a=[]; if(t.focus&&!t.done)a.push(`<span class="focus-pill">Focus</span>`); if(t.carriedFrom)a.push(`<span class="carried-pill">From ${dayShort(t.carriedFrom)}</span>`); if(t.repeat)a.push(`<span class="repeat-pill">${ec(t.repeat)}</span>`); return a.join('');
+}
+function shouldCreateRecurring(r,today){
+  if(!r||!r.text)return false; if(r.last===today)return false;
+  if(!r.last)return true;
+  const last=pd(r.last), now=pd(today); const diff=Math.floor((now-last)/86400000);
+  if(r.freq==='daily')return diff>=1; if(r.freq==='weekly')return diff>=7; if(r.freq==='monthly')return now.getFullYear()>last.getFullYear()||now.getMonth()>last.getMonth(); return false;
+}
+function generateRecurringTasks(){
+  const today=todayKey(); let changed=false; D.recurring=D.recurring||[];
+  D.recurring.forEach(r=>{if(shouldCreateRecurring(r,today)){tf(today).push({id:nid(),text:r.text,priority:r.priority||'med',done:false,focus:!!r.focus,repeat:r.freq,repeatId:r.id});r.last=today;changed=true;}});
+  return changed;
+}
+function addRecurringPrompt(){
+  const text=prompt('Recurring task text:'); if(!text||!text.trim())return;
+  const freq=(prompt('Frequency: daily, weekly, or monthly','daily')||'daily').toLowerCase();
+  if(!['daily','weekly','monthly'].includes(freq)){showToast('Use daily, weekly, or monthly');return;}
+  const pr=(prompt('Priority: high, med, or low','med')||'med').toLowerCase();
+  const priority=pr.startsWith('h')?'high':pr.startsWith('l')?'low':'med';
+  const id=nid(); D.recurring.push({id,text:text.trim(),freq,priority,created:TD,last:''}); generateRecurringTasks(); dosave2(); re(); showToast('Recurring task added');
+}
+function openReview(){psv('daily');}
+function openSearch(){
+  let box=document.getElementById('_searchBox'); if(box){box.remove();return;}
+  box=document.createElement('div');box.id='_searchBox';box.className='search-backdrop';
+  box.innerHTML=`<div class="search-modal"><div style="display:flex;align-items:center;gap:8px"><input id="searchInput" placeholder="Search tasks, goals, notes…" oninput="renderSearch(this.value)" onkeydown="if(event.key==='Escape')closeSearch()"><button class="topbtn" onclick="closeSearch()">Close</button></div><div id="searchResults" style="margin-top:10px"></div></div>`;
+  document.body.appendChild(box); setTimeout(()=>document.getElementById('searchInput')?.focus(),30); renderSearch('');
+}
+function closeSearch(){document.getElementById('_searchBox')?.remove();}
+function renderSearch(q){
+  q=(q||'').toLowerCase().trim(); const res=[];
+  Object.keys(D.tasks||{}).forEach(dt=>(D.tasks[dt]||[]).forEach(t=>{if(!q||String(t.text||'').toLowerCase().includes(q))res.push({type:'Task',date:dt,text:t.text,done:t.done});}));
+  Object.keys(D.dn||{}).forEach(dt=>{if(D.dn[dt]&&(!q||D.dn[dt].toLowerCase().includes(q)))res.push({type:'Daily note',date:dt,text:D.dn[dt]});});
+  Object.keys(D.wg||{}).forEach(w=>(D.wg[w]||[]).forEach(g=>{if(!q||String(g.text||'').toLowerCase().includes(q))res.push({type:'Weekly goal',date:w,text:g.text,view:'weekly'});}));
+  Object.keys(D.mg||{}).forEach(m=>(D.mg[m]||[]).forEach(g=>{if(!q||String(g.text||'').toLowerCase().includes(q))res.push({type:'Monthly goal',date:m,text:g.text,view:'monthly'});}));
+  const html=res.slice(0,60).map(r=>`<button class="search-result" onclick="jumpSearch('${r.view||'daily'}','${r.date}')"><strong>${ec(r.text)}</strong><div class="small-muted">${r.type} · ${r.date}${r.done?' · done':''}</div></button>`).join('')||`<div class="small-muted" style="padding:16px">No results.</div>`;
+  const el=document.getElementById('searchResults'); if(el)el.innerHTML=html;
+}
+function jumpSearch(view,date){closeSearch(); if(view==='monthly'){S.mv=date;psv('monthly');}else{S.d=date;psv(view==='weekly'?'weekly':'daily');}}
+
+
+function toggleMoreMenu(e){
+  if(e)e.stopPropagation();
+  const m=document.getElementById('moreMenu'); if(!m)return;
+  if(m.style.display==='none'||!m.style.display){renderMoreMenu();m.style.display='block';setTimeout(()=>document.addEventListener('click',closeMoreMenu,{once:true}),30);}else closeMoreMenu();
+}
+function closeMoreMenu(){const m=document.getElementById('moreMenu'); if(m)m.style.display='none';}
+function renderMoreMenu(){
+  const m=document.getElementById('moreMenu'); if(!m)return;
+  const hide=D.ui&&D.ui.hideDone;
+  m.innerHTML=`
+    <button class="cmi" onclick="toggleHideDone();closeMoreMenu()">${hide?'Show':'Hide'} completed</button>
+    <button class="cmi" onclick="addRecurringPrompt();closeMoreMenu()">Repeat task…</button>
+    <div class="cmsep"></div>
+    <button class="cmi" onclick="exportData();closeMoreMenu()">Export backup</button>
+    <button class="cmi" onclick="importData();closeMoreMenu()">Import backup</button>
+  `;
+}
+let addTarget='daily';
+function openAddModal(target='daily'){
+  addTarget=target;
+  let box=document.getElementById('_addBox'); if(box){box.remove();return;}
+  box=document.createElement('div');box.id='_addBox';box.className='add-backdrop';
+  box.innerHTML=`<div class="add-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="font-size:18px;font-weight:800;color:var(--pt)">Add task</div>
+      <button class="bact" onclick="closeAddModal()" style="opacity:1">${ic('x',16)}</button>
+    </div>
+    <div class="add-where"><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button></div>
+    <input id="addModalInput" placeholder="What do you need to do?" onkeydown="if(event.key==='Enter')modalAdd('med'); if(event.key==='Escape')closeAddModal()">
+    <div class="add-prio-row"><button class="qbtn high" onclick="modalAdd('high')">High</button><button class="qbtn med" onclick="modalAdd('med')">Medium</button><button class="qbtn low" onclick="modalAdd('low')">Low</button></div>
+  </div>`;
+  box.onclick=closeAddModal; document.body.appendChild(box); setTimeout(()=>document.getElementById('addModalInput')?.focus(),30);
+}
+function setAddTarget(t){addTarget=t;document.getElementById('aw-daily')?.classList.toggle('on',t==='daily');document.getElementById('aw-tomorrow')?.classList.toggle('on',t==='tomorrow');}
+function closeAddModal(){document.getElementById('_addBox')?.remove();}
+function modalAdd(priority='med'){
+  const el=document.getElementById('addModalInput'); const text=(el?.value||'').trim().replace(/\s+/g,' '); if(!text)return;
+  const date=addTarget==='tomorrow'?ad(TD,1):(S.v==='daily'?S.d:TD);
+  tf(date).push({id:nid(),text,priority,done:false});
+  if(el)el.value=''; closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
+}
+function summaryHTML(dt,allDayTasks){
+  const left=allDayTasks.filter(t=>!t.done).length;
+  const focus=allDayTasks.filter(t=>t.focus&&!t.done).length;
+  const carried=allDayTasks.filter(t=>t.carriedFrom&&!t.done).length;
+  if(!allDayTasks.length)return'';
+  const simple=(focus===0&&carried===0);
+  return `<div class="summary-card${simple?' is-simple':''}">
+    <div class="sum-item"><span class="sum-num">${left}</span><span class="sum-lab">${left===1?'task':'tasks'} left</span></div>
+    <div class="sum-item"><span class="sum-num">${focus}</span><span class="sum-lab">focus</span></div>
+    <div class="sum-item"><span class="sum-num">${carried}</span><span class="sum-lab">carried</span></div>
+  </div>`;
+}
+function carriedSectionHTML(dt,tasks){
+  const carried=tasks.filter(t=>t.carriedFrom&&!t.done);
+  if(!carried.length)return'';
+  return `<div class="carried-card"><div class="sh">${ic('arrow-right',13)}&thinsp;Carried from previous days</div><div class="dzone">${carried.map(t=>tBlock(t,t.priority||'med',dt)).join('')}</div></div>`;
+}
+
 function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
   const prioOpts=['high','med','low'].map(p=>`<button class="popt ptag ${p}" onclick="chPrio('${ctx}','${item.id}','${p}','${kind}')" style="${(prio||item.priority)===p?`outline:2px solid ${PC[p]};font-weight:700`:''}">${PL[p]}</button>`).join('');
@@ -593,8 +864,6 @@ function cMenuHTML(item,ctx,kind,prio){
   const prioSection=(kind==='task'||kind==='wg')?`<div class="cmsep"></div><div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div><div class="cmsep"></div>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
-    <button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>
-    <button class="cmi" onclick="togItem('${kind}','${ctx}','${item.id}');menuSt=null;event.stopPropagation()">${ic(item.done?'square':'check',14,'color:var(--tt)')} Mark ${item.done?'undone':'done'}</button>
     ${moveBtn}${wgMove}${prioSection}
     <button class="cmi danger" onclick="delItem('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('trash',14)} Delete</button>
   </div>`;
@@ -607,10 +876,12 @@ function tBlock(t,prio,ctx){
     <div class="block${justDone===t.id?' just-done':''}">
       <span class="dh" onpointerdown="drS(event,{kind:'task',id:'${t.id}',prio:'${prio}',ctx:'${ctx}'})">${ic('grip',14)}</span>
       <input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${ctx}','${t.id}')" onclick="event.stopPropagation()">
+      <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${ctx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
       ${isEdit
         ?`<input id="ei-${t.id}" class="binp" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${ctx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${ctx}','task')">`
         :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${ctx}','task')">${ec(t.text)}</span>`}
-      <div class="bacts">${cMenuHTML(t,ctx,'task',prio)}</div>
+      ${carriedHTML(t)}
+      <div class="row-actions"><button class="bact" onclick="movePn={kind:'task',id:'${t.id}',from:'${ctx}',wo:0};re();event.stopPropagation()" title="Move">${ic('calendar',14)}</button>${cMenuHTML(t,ctx,'task',prio)}</div>
     </div>
     ${isMove?movePH(t.id,ctx):''}
   </div>`;
@@ -630,13 +901,17 @@ function gBlock(g,prio,ctx,kind){
 }
 
 function rd(){
-  const dt=S.d,d=pd(dt),tasks=tf(dt),done=tasks.filter(t=>t.done).length,total=tasks.length;
+  const dt=S.d,d=pd(dt),allDayTasks=tf(dt),visibleTasks=(D.ui&&D.ui.hideDone)?allDayTasks.filter(t=>!t.done):allDayTasks;
+  const done=allDayTasks.filter(t=>t.done).length,total=allDayTasks.length;
   const note=D.dn[dt]||'',isT=dt===TD;
   const pct=total>0?Math.round(done/total*100):0,allDone=total>0&&done===total;
+  const carriedOpen=visibleTasks.filter(t=>t.carriedFrom&&!t.done);
+  const doneTasks=(D.ui&&D.ui.hideDone)?[]:allDayTasks.filter(t=>t.done);
+  const regularTasks=visibleTasks.filter(t=>!t.done && !(t.carriedFrom&&!t.done));
 
   const secs=['high','med','low'].map(p=>{
-    const pts=tasks.filter(t=>t.priority===p);
-    const key='d-'+dt+'-'+p;
+    const pts=regularTasks.filter(t=>t.priority===p);
+    if(!pts.length)return'';
     const colKey='col-d-'+p;
     const isCol=!!collapsed[colKey];
     const label={high:'High priority',med:'Medium priority',low:'Low / someday'}[p];
@@ -648,13 +923,10 @@ function rd(){
       </div>
       ${isCol?'':` <div class="dzone" data-zone data-zprio="${p}" data-zctx="${dt}">
         ${pts.map(t=>tBlock(t,p,dt)).join('')}
-      </div>
-      ${addFH(key,p,'task',dt)}`}
+      </div>`}
     </div>`;
   }).join('');
 
-  // Tappable date — opens native date picker
-  // Date header — same scale as monthly, today is blue+bold
   const dateHdr=`<label class="date-tap" style="cursor:pointer;display:block">
     <div style="font-size:10px;font-weight:700;color:var(--tt);letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px">${DN[(d.getDay()+6)%7]}</div>
     <div style="display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
@@ -663,11 +935,19 @@ function rd(){
     </div>
     <input type="date" value="${dt}" onchange="S.d=this.value;addSt=null;editSt=null;re()">
   </label>`;
-  // Stat line
   const statLine=total===0?''
-    :allDone?`<div style="color:var(--suc);font-size:13px;font-weight:600;margin-top:8px;display:inline-flex;align-items:center;gap:5px">${ic('check',13,'color:var(--suc)')} All done! 🎉</div>`
+    :allDone?`<div style="color:var(--suc);font-size:13px;font-weight:600;margin-top:8px;display:inline-flex;align-items:center;gap:5px">${ic('check',13,'color:var(--suc)')} All done</div>`
     :done===0?`<div style="color:var(--tt);font-size:12px;font-weight:500;margin-top:6px">${total} task${total===1?'':'s'}</div>`
     :`<div style="color:var(--tt);font-size:12px;font-weight:500;margin-top:6px">${done} of ${total} done &nbsp;·&nbsp;<span style="color:var(--inf);font-weight:600">${total-done} left</span></div>`;
+  const doneSection=doneTasks.length?`<div class="sec-wrap done-today-soft">
+    <div class="sh sh-toggle" onclick="collapsed['col-done-today']=!collapsed['col-done-today'];re()">
+      ${ic('check',12,'color:var(--suc)')}&thinsp;Done today
+      <span class="done-count">${doneTasks.length}</span>
+      <span class="col-chevron" style="transform:rotate(${collapsed['col-done-today']?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
+    </div>
+    ${collapsed['col-done-today']?'':`<div class="dzone">${doneTasks.map(t=>tBlock(t,t.priority||'med',dt)).join('')}</div>`}
+  </div>`:'';
+  const emptyHTML=(!visibleTasks.length)?`<div class="empty-day"><div style="font-weight:800;color:var(--pt);margin-bottom:4px">Clear day</div><div style="font-size:13px">Use the + button to add a task.</div></div>`:'';
 
   document.getElementById('vd').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -679,11 +959,15 @@ function rd(){
       <button class="nnb" onclick="S.d=ad(S.d,1);editSt=null;addSt=null;re()">${ic('chevron-right',18)}</button>
     </div>
     <div class="prog" style="margin-top:16px"><div class="progf" style="width:${pct}%;${allDone&&total>0?'background:var(--suc)':''}"></div></div>
+    ${focusHTML(dt)}
+    ${carriedSectionHTML(dt,visibleTasks)}
     ${secs}
+    ${doneSection}
+    ${emptyHTML}
     <div class="ndiv"></div>
     <div class="sh">${ic('notes',13)}&thinsp;Notes &amp; reflection</div>
     <textarea class="n-ta" placeholder="Wins, blockers, carry-overs… write anything" oninput="D.dn['${dt}']=this.value;dosave2()">${ec(note)}</textarea>`;
-  if(addSt)focusAdd(addSt);
+  updateHideBtn();
 }
 
 function rw(){
@@ -696,7 +980,7 @@ function rw(){
     const pct=total>0?Math.round(done/total*100):0,allDone=total>0&&done===total;
     const isToday=dt===TD;
     const pOrder={high:0,med:1,low:2};
-    const sorted=[...tasks].sort((a,b)=>(pOrder[a.priority]??1)-(pOrder[b.priority]??1));
+    const sorted=[...(D.ui&&D.ui.hideDone?tasks.filter(t=>!t.done):tasks)].sort((a,b)=>(pOrder[a.priority]??1)-(pOrder[b.priority]??1));
     const cards=sorted.length===0?'':sorted.map(t=>`<div class="bcard" onclick="S.d='${dt}';psv('daily')" onmouseenter="showTip(event,'${ec(t.text)}','${t.priority}')" onmouseleave="hideTip()" style="${t.done?'opacity:.4':''}">
           <div style="display:flex;align-items:center;gap:5px;min-width:0">
             <span style="width:6px;height:6px;border-radius:50%;background:${PC[t.priority]};flex-shrink:0;display:inline-block"></span>
@@ -719,6 +1003,7 @@ function rw(){
   const d0=pd(dates[0]),d6=pd(dates[6]);
   const hdr=d0.getMonth()===d6.getMonth()?`${MN[d0.getMonth()]} ${d0.getFullYear()}`:
     `${MNS[d0.getMonth()]}–${MNS[d6.getMonth()]} ${d6.getFullYear()}`;
+  const isCurrentWeek=wk===monOf(TD);
   const wpct=wT>0?Math.round(wD/wT*100):0;
   const dG=goals.filter(g=>g.done).length;
   const goalSecs=['high','med','low'].map(p=>{
@@ -743,7 +1028,10 @@ function rw(){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <button class="nnb" onclick="S.d=ad(S.d,-7);addSt=null;editSt=null;re()">${ic('chevron-left',18)}</button>
       <div style="text-align:center">
-        <div class="ph">${hdr}</div>
+        <div style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
+          <span class="ph" style="color:${isCurrentWeek?'var(--inf)':'var(--pt)'}">${hdr}</span>
+          ${isCurrentWeek?`<span style="font-size:11px;font-weight:700;color:var(--inf);background:var(--inf-bg);padding:3px 9px;border-radius:20px;letter-spacing:.02em">This Week</span>`:''}
+        </div>
         <div class="pmeta"><span class="schip">${wD}/${wT} tasks</span><span class="schip">${dG}/${goals.length} goals</span></div>
       </div>
       <button class="nnb" onclick="S.d=ad(S.d,7);addSt=null;editSt=null;re()">${ic('chevron-right',18)}</button>
@@ -761,6 +1049,7 @@ function rw(){
 
 function rm(){
   const mv=S.mv,[y,mo]=mv.split('-').map(Number),goals=gf(mv),note=D.mn[mv]||'';
+  const isCurrentMonth=mv===mk(TD);
   const dG=goals.filter(g=>g.done).length;
   let mD=0,mT=0;
   Object.keys(D.tasks).filter(k=>k.startsWith(mv)).forEach(dt=>{const t=D.tasks[dt];mT+=t.length;mD+=t.filter(t=>t.done).length;});
@@ -770,7 +1059,10 @@ function rm(){
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
       <button class="nnb" onclick="nm(-1)">${ic('chevron-left',18)}</button>
       <div style="text-align:center">
-        <div class="ph">${MN[mo-1]} ${y}</div>
+        <div style="display:inline-flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center">
+          <span class="ph" style="color:${isCurrentMonth?'var(--inf)':'var(--pt)'}">${MN[mo-1]} ${y}</span>
+          ${isCurrentMonth?`<span style="font-size:11px;font-weight:700;color:var(--inf);background:var(--inf-bg);padding:3px 9px;border-radius:20px;letter-spacing:.02em">This Month</span>`:''}
+        </div>
         <div class="pmeta"><span class="schip">${dG}/${goals.length} goals</span><span class="schip">${mD}/${mT} tasks done</span></div>
       </div>
       <button class="nnb" onclick="nm(1)">${ic('chevron-right',18)}</button>
@@ -791,355 +1083,6 @@ function rm(){
 }
 function nm(n){const[y,m]=S.mv.split('-').map(Number),d=new Date(y,m-1+n,1);S.mv=`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;addSt=null;editSt=null;re();}
 
-// ── Google Drive Integration — SAFE RECONNECT / ROBUST ───────────────
-// Best possible setup for a simple GitHub Pages app:
-// 1) Local saving always works first.
-// 2) Drive can reconnect silently when Google allows it.
-// 3) If Google blocks silent login, the button returns to Connect instead of getting stuck.
-// 4) No permanent refresh token is stored. Export / Import remains the safety backup.
-
-const GD={
-  clientId: localStorage.getItem('pl_gcid')||'',
-  token: sessionStorage.getItem('pl_gat')||'',
-  expiresAt: Number(sessionStorage.getItem('pl_gexp')||0),
-  fileId: localStorage.getItem('pl_gfid')||'',
-  connected: false,
-  saving: false,
-  pendingSave: false,
-  connecting: false,
-  autoTried: false,
-  tokenClient: null,
-  lastError: ''
-};
-GD.connected = !!(GD.token && Date.now() < GD.expiresAt - 60000);
-
-function gdSvg(){
-  return `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.5 3L2 19.5h7.5L12.5 14l3 5.5H23L12.5 3z" fill="#4285F4"/><path d="M2 19.5h7.5l3-5.5H5l-3 5.5z" fill="#0F9D58"/><path d="M12.5 14l3 5.5H23l-3-5.5H12.5z" fill="#FBBC04"/></svg>`;
-}
-
-function gdSetBtn(label,color,title,dot){
-  const btn=document.getElementById('gdBtn');
-  if(!btn)return;
-  btn.innerHTML=(dot?`<span style="width:7px;height:7px;border-radius:50%;background:${dot};display:inline-block;flex-shrink:0"></span>`:gdSvg())+label;
-  btn.style.color=color;
-  btn.title=title;
-}
-
-function gdStatus(){
-  if(GD.saving){
-    gdSetBtn('Saving…','var(--inf)','Saving to Google Drive…','var(--inf)');
-  }else if(GD.connecting){
-    gdSetBtn('Connecting…','var(--inf)','Connecting to Google Drive…','var(--inf)');
-  }else if(GD.connected){
-    gdSetBtn('Drive on','var(--suc)','Drive connected. Click to refresh/reconnect.','var(--suc)');
-  }else if(GD.clientId){
-    gdSetBtn('Connect','var(--inf)','Click to connect to Google Drive',null);
-  }else{
-    gdSetBtn('Drive','var(--tt)','Set up Google Drive sync',null);
-  }
-}
-
-function gdClick(){
-  if(!GD.clientId){ gdPanelOpen(); return; }
-  // User click = allowed visible Google prompt.
-  gdConnect({prompt:'consent',notify:true,loadFile:true});
-}
-
-function gdPanelOpen(){
-  const p=document.getElementById('gdPanel');if(p)p.style.display='block';
-  const inp=document.getElementById('gdClientInput');
-  if(inp)inp.value=GD.clientId||'';
-  try{
-    const panel=document.getElementById('gdPanel');
-    if(panel)panel.innerHTML=panel.innerHTML.replace('${location.origin}', location.origin);
-  }catch(e){}
-}
-function gdPanelClose(){ const p=document.getElementById('gdPanel');if(p)p.style.display='none'; }
-
-function gdSaveClientId(){
-  const inp=document.getElementById('gdClientInput');
-  if(!inp||!inp.value.trim()){showToast('⚠ Paste your Client ID first');return;}
-  const v=inp.value.trim();
-  if(!v.endsWith('.apps.googleusercontent.com')){
-    showToast('⚠ This does not look like a Google Client ID');
-    return;
-  }
-  GD.clientId=v;
-  localStorage.setItem('pl_gcid',GD.clientId);
-  gdPanelClose();
-  gdStatus();
-  gdConnect({prompt:'consent',notify:true,loadFile:true});
-}
-
-function gdLoadScript(){
-  return new Promise((res,rej)=>{
-    if(window.google?.accounts?.oauth2){res();return;}
-    const existing=document.querySelector('script[src="https://accounts.google.com/gsi/client"]');
-    if(existing){existing.addEventListener('load',res,{once:true});existing.addEventListener('error',rej,{once:true});return;}
-    const s=document.createElement('script');
-    s.src='https://accounts.google.com/gsi/client';
-    s.onload=res;s.onerror=rej;
-    document.head.appendChild(s);
-  });
-}
-
-async function gdEnsureToken(silent=true){
-  if(!GD.clientId)return false;
-  if(GD.token && Date.now() < GD.expiresAt - 90000){
-    GD.connected=true;
-    gdStatus();
-    return true;
-  }
-  return gdConnect({prompt:silent?'':'consent',notify:!silent,loadFile:false});
-}
-
-async function gdConnect(opts={}){
-  const prompt = opts.prompt ?? '';
-  const notify = opts.notify ?? false;
-  const loadFile = opts.loadFile ?? false;
-
-  if(!GD.clientId){gdPanelOpen();return false;}
-  if(GD.connecting)return false;
-
-  try{
-    GD.connecting=true;
-    gdStatus();
-    if(notify)showToast('Connecting to Drive…');
-    await gdLoadScript();
-
-    return await new Promise((resolve)=>{
-      let settled=false;
-      let timer=null;
-      const finish=(ok)=>{
-        if(settled)return;
-        settled=true;
-        if(timer)clearTimeout(timer);
-        GD.connecting=false;
-        gdStatus();
-        resolve(ok);
-      };
-
-      // Silent reconnect must fail cleanly. Google may block it without a user click.
-      if(prompt===''){
-        timer=setTimeout(()=>{
-          GD.token='';
-          GD.expiresAt=0;
-          GD.connected=false;
-          GD.lastError='silent reconnect timed out';
-          sessionStorage.removeItem('pl_gat');
-          sessionStorage.removeItem('pl_gexp');
-          finish(false);
-        },4500);
-      }
-
-      GD.tokenClient=google.accounts.oauth2.initTokenClient({
-        client_id:GD.clientId,
-        scope:'https://www.googleapis.com/auth/drive.file',
-        callback:async(r)=>{
-          if(settled)return;
-
-          if(r.error){
-            GD.token='';
-            GD.expiresAt=0;
-            GD.connected=false;
-            GD.lastError=r.error;
-            sessionStorage.removeItem('pl_gat');
-            sessionStorage.removeItem('pl_gexp');
-            if(notify)showToast('⚠ Auth failed: '+r.error);
-            finish(false);
-            return;
-          }
-
-          GD.token=r.access_token;
-          const expiresIn=Number(r.expires_in||3600);
-          GD.expiresAt=Date.now()+expiresIn*1000;
-          GD.connected=true;
-          GD.lastError='';
-          sessionStorage.setItem('pl_gat',GD.token);
-          sessionStorage.setItem('pl_gexp',String(GD.expiresAt));
-
-          if(loadFile){
-            if(GD.fileId){
-              await gdLoadFile(false);
-            }else{
-              await gdFindExistingFile();
-              if(GD.fileId) await gdLoadFile(false);
-            }
-            await gdSave(true);
-          }
-
-          finish(true);
-        }
-      });
-
-      try{GD.tokenClient.requestAccessToken({prompt});}
-      catch(e){
-        GD.token='';
-        GD.expiresAt=0;
-        GD.connected=false;
-        GD.lastError=e.message||String(e);
-        sessionStorage.removeItem('pl_gat');
-        sessionStorage.removeItem('pl_gexp');
-        if(notify)showToast('⚠ Could not open Google login');
-        finish(false);
-      }
-    });
-  }catch(e){
-    GD.connecting=false;
-    GD.connected=false;
-    gdStatus();
-    if(notify)showToast('⚠ Could not load Google login');
-    console.error('Google Drive connect failed:',e);
-    return false;
-  }
-}
-
-async function gdAutoConnect(){
-  if(!GD.clientId || GD.autoTried)return;
-  GD.autoTried=true;
-  setTimeout(async()=>{
-    const ok=await gdEnsureToken(true);
-    if(ok){
-      if(!GD.fileId) await gdFindExistingFile();
-      if(GD.fileId) await gdLoadFile(false);
-    }
-  },700);
-}
-
-async function gdFindExistingFile(){
-  if(!GD.token)return;
-  try{
-    const q=encodeURIComponent("name='planner-data.json' and trashed=false");
-    const url=`https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc&pageSize=10`;
-    const res=await fetch(url,{headers:{Authorization:`Bearer ${GD.token}`}});
-    if(res.status===401||res.status===403){
-      const ok=await gdEnsureToken(true);
-      if(ok)return gdFindExistingFile();
-      return;
-    }
-    if(!res.ok)return;
-    const data=await res.json();
-    if(data.files&&data.files.length){
-      GD.fileId=data.files[0].id;
-      localStorage.setItem('pl_gfid',GD.fileId);
-    }
-  }catch(e){
-    console.warn('Could not search existing Drive file',e);
-  }
-}
-
-async function gdSave(notify=false){
-  if(!GD.clientId){gdStatus();return;}
-  if(!GD.token||!GD.connected||Date.now() > GD.expiresAt - 90000){
-    const ok=await gdEnsureToken(true);
-    if(!ok){gdStatus();return;}
-  }
-
-  if(GD.saving){
-    GD.pendingSave=true;
-    return;
-  }
-
-  GD.saving=true;
-  gdStatus();
-
-  const body=JSON.stringify(D,null,2);
-  try{
-    let res;
-    if(GD.fileId){
-      res=await fetch(`https://www.googleapis.com/upload/drive/v3/files/${GD.fileId}?uploadType=media`,{
-        method:'PATCH',
-        headers:{Authorization:`Bearer ${GD.token}`,'Content-Type':'application/json'},
-        body
-      });
-    }else{
-      const meta=JSON.stringify({name:'planner-data.json',mimeType:'application/json'});
-      const fd=new FormData();
-      fd.append('metadata',new Blob([meta],{type:'application/json'}));
-      fd.append('file',new Blob([body],{type:'application/json'}));
-      res=await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',{
-        method:'POST',
-        headers:{Authorization:`Bearer ${GD.token}`},
-        body:fd
-      });
-    }
-
-    if(res.status===401||res.status===403){
-      GD.token='';
-      GD.expiresAt=0;
-      GD.connected=false;
-      sessionStorage.removeItem('pl_gat');
-      sessionStorage.removeItem('pl_gexp');
-      const ok=await gdEnsureToken(true);
-      if(ok){GD.saving=false; return gdSave(notify);}
-      GD.lastError='session expired';
-      gdStatus();
-      if(notify)showToast('⚠ Drive session expired — click Connect');
-      return;
-    }
-
-    if(!res.ok){
-      const errText=await res.text().catch(()=>String(res.status));
-      GD.lastError=errText;
-      gdStatus();
-      showToast('⚠ Drive save failed');
-      console.error('Drive save failed:',res.status,errText);
-      return;
-    }
-
-    if(!GD.fileId){
-      const d=await res.json();
-      GD.fileId=d.id;
-      localStorage.setItem('pl_gfid',GD.fileId);
-    }
-
-    if(notify)showToast('✓ Saved to Google Drive');
-  }catch(e){
-    GD.lastError=e.message||String(e);
-    showToast('⚠ Drive save failed');
-    console.error('Drive save failed:',e);
-  }finally{
-    GD.saving=false;
-    gdStatus();
-
-    if(GD.pendingSave){
-      GD.pendingSave=false;
-      setTimeout(()=>gdSave(false),150);
-    }
-  }
-}
-
-async function gdLoadFile(notify=true){
-  if(!GD.token||!GD.fileId)return;
-  try{
-    const res=await fetch(`https://www.googleapis.com/drive/v3/files/${GD.fileId}?alt=media`,{
-      headers:{Authorization:`Bearer ${GD.token}`}
-    });
-    if(res.status===401||res.status===403){
-      const ok=await gdEnsureToken(true);
-      if(ok)return gdLoadFile(notify);
-      return;
-    }
-    if(!res.ok){
-      if(res.status===404){
-        localStorage.removeItem('pl_gfid');
-        GD.fileId='';
-      }
-      return;
-    }
-    const data=await res.json();
-
-    if(data&&typeof data==='object'&&(data.tasks||data.dn||data.wn||data.wg||data.mg||data.mn)){
-      D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...data};
-      try{localStorage.setItem('pl3',JSON.stringify(D));}catch(e){}
-      re();
-      if(notify)showToast('✓ Loaded from Google Drive');
-    }
-  }catch(e){
-    console.warn('Drive load failed:',e);
-  }
-}
-
 // ── Export / Import
 
 function exportData(){
@@ -1148,9 +1091,59 @@ function exportData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
+  D.ui=D.ui||{};D.ui.lastBackup=TD;try{localStorage.setItem('pl3',JSON.stringify(D));}catch(e){}
   a.download=`planner-backup-${TD}.json`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
+}
+function mergePlannerData(imported){
+  const incoming=normalizeData({tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{},...imported});
+  D=normalizeData(D||{});
+  let added=0;
+
+  function sameItem(a,b){
+    return String(a.text||'').trim()===String(b.text||'').trim()
+      && String(a.priority||'')===String(b.priority||'')
+      && !!a.done===!!b.done;
+  }
+  function mergeItemMap(section){
+    Object.keys(incoming[section]||{}).forEach(key=>{
+      const src=Array.isArray(incoming[section][key])?incoming[section][key]:[];
+      const dst=Array.isArray(D[section][key])?D[section][key]:(D[section][key]=[]);
+      src.forEach(item=>{
+        if(!item||!String(item.text||'').trim())return;
+        const exists=dst.some(x=>(item.id&&x.id===item.id)||sameItem(x,item));
+        if(!exists){dst.push({...item,id:item.id||nid()});added++;}
+      });
+    });
+  }
+  function mergeNotes(section){
+    Object.keys(incoming[section]||{}).forEach(key=>{
+      const src=String(incoming[section][key]||'').trim();
+      if(!src)return;
+      const cur=String(D[section][key]||'').trim();
+      if(!cur)D[section][key]=src;
+      else if(cur!==src&&!cur.includes(src))D[section][key]=cur+'\n\nImported note:\n'+src;
+    });
+  }
+
+  mergeItemMap('tasks');
+  mergeItemMap('wg');
+  mergeItemMap('mg');
+  mergeNotes('dn');
+  mergeNotes('wn');
+  mergeNotes('mn');
+
+  const recDst=Array.isArray(D.recurring)?D.recurring:(D.recurring=[]);
+  (incoming.recurring||[]).forEach(r=>{
+    if(!r||!String(r.text||'').trim())return;
+    const exists=recDst.some(x=>(r.id&&x.id===r.id)||(String(x.text||'').trim()===String(r.text||'').trim()&&x.freq===r.freq));
+    if(!exists){recDst.push({...r,id:r.id||nid()});added++;}
+  });
+
+  D.review={...(incoming.review||{}),...(D.review||{})};
+  D.ui={...(incoming.ui||{}),...(D.ui||{})};
+  return added;
 }
 function importData(){
   const input=document.createElement('input');
@@ -1162,9 +1155,10 @@ function importData(){
       try{
         const p=JSON.parse(ev.target.result);
         if(typeof p!=='object'||Array.isArray(p))throw new Error();
-        D={tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},...p};
+        const added=mergePlannerData(p);
+        dailyMaintenance(false);
         dosave2();re();
-        showToast('✓ Data imported');
+        showToast(added>0?`✓ Imported ${added} new item${added===1?'':'s'}`:'✓ Import complete — no duplicates added');
       }catch{showToast('⚠ Invalid file');}
     };
     reader.readAsText(file);
@@ -1209,11 +1203,39 @@ function toggleTheme(){
   const currentlyDark = _theme==='dark' || (_theme==='auto' && sysDark);
   _theme = currentlyDark ? 'light' : 'dark';
   localStorage.setItem('pl_theme', _theme);
-  applyTheme();
-}
-applyTheme();
-gdStatus();
+  
+document.addEventListener('keydown',e=>{
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.key==='n'||e.key==='N'){e.preventDefault();document.getElementById('quickAdd')?.focus();}
+  if(e.key==='t'||e.key==='T'){e.preventDefault();goToday();}
+  if(e.key==='d'||e.key==='D'){e.preventDefault();psv('daily');}
+  if(e.key==='w'||e.key==='W'){e.preventDefault();psv('weekly');}
+  if(e.key==='m'||e.key==='M'){e.preventDefault();psv('monthly');}
+  if(e.key==='/'){e.preventDefault();openSearch();}
+  if(e.key==='h'||e.key==='H'){e.preventDefault();toggleHideDone();}
+  if(e.key==='b'||e.key==='B'){e.preventDefault();exportData();}
+});
 
+applyTheme();
+}
+
+document.addEventListener('keydown',e=>{
+  const tag=(e.target&&e.target.tagName||'').toLowerCase();
+  if(tag==='input'||tag==='textarea'||e.metaKey||e.ctrlKey||e.altKey)return;
+  if(e.key==='n'||e.key==='N'){e.preventDefault();document.getElementById('quickAdd')?.focus();}
+  if(e.key==='t'||e.key==='T'){e.preventDefault();goToday();}
+  if(e.key==='d'||e.key==='D'){e.preventDefault();psv('daily');}
+  if(e.key==='w'||e.key==='W'){e.preventDefault();psv('weekly');}
+  if(e.key==='m'||e.key==='M'){e.preventDefault();psv('monthly');}
+  if(e.key==='/'){e.preventDefault();openSearch();}
+  if(e.key==='h'||e.key==='H'){e.preventDefault();toggleHideDone();}
+  if(e.key==='b'||e.key==='B'){e.preventDefault();exportData();}
+});
+
+applyTheme();
+
+setInterval(()=>dailyMaintenance(true),60000);
+window.addEventListener('focus',()=>dailyMaintenance(true));
 tryLoad();
-gdAutoConnect();
 </script>
