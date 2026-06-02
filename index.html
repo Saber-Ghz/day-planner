@@ -248,7 +248,10 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .sum-num{font-size:13px;font-weight:800;color:var(--pt);line-height:1}
 .sum-lab{font-size:13px;font-weight:650;color:var(--st);text-transform:none;letter-spacing:0;margin-top:0}
 .summary-card.is-simple .sum-item:not(:first-child){display:none}
-.carried-card{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--shadow);padding:0;margin:0 0 14px;overflow:hidden}
+.carried-card{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--shadow);padding:0;margin:0 0 14px;overflow:visible;position:relative;z-index:2}
+.carried-card .dzone{overflow:visible;position:relative;z-index:3}
+.carried-card .block:has(.cmenu){z-index:30}
+.carried-card .row-actions{position:relative;z-index:40}
 .carried-card .sh{margin:10px 14px 8px}
 .starbtn{border:none;background:none;color:var(--tt);cursor:pointer;width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0}
 .starbtn.on{color:var(--inf);background:var(--inf-bg)}
@@ -797,14 +800,58 @@ function generateRecurringTasks(){
   D.recurring.forEach(r=>{if(shouldCreateRecurring(r,today)){tf(today).push({id:nid(),text:r.text,priority:r.priority||'med',done:false,focus:!!r.focus,repeat:r.freq,repeatId:r.id});r.last=today;changed=true;}});
   return changed;
 }
-function addRecurringPrompt(){
-  const text=prompt('Recurring task text:'); if(!text||!text.trim())return;
-  const freq=(prompt('Frequency: daily, weekly, or monthly','daily')||'daily').toLowerCase();
-  if(!['daily','weekly','monthly'].includes(freq)){showToast('Use daily, weekly, or monthly');return;}
-  const pr=(prompt('Priority: high, med, or low','med')||'med').toLowerCase();
-  const priority=pr.startsWith('h')?'high':pr.startsWith('l')?'low':'med';
-  const id=nid(); D.recurring.push({id,text:text.trim(),freq,priority,created:TD,last:''}); generateRecurringTasks(); dosave2(); re(); showToast('Recurring task added');
+let repeatFreq='daily';
+let repeatPriority='med';
+function openRepeatModal(){
+  let box=document.getElementById('_repeatBox'); if(box){box.remove();return;}
+  repeatFreq='daily'; repeatPriority='med';
+  box=document.createElement('div');box.id='_repeatBox';box.className='add-backdrop';
+  box.innerHTML=`<div class="add-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="font-size:18px;font-weight:800;color:var(--pt)">Repeat task</div>
+      <button class="bact" onclick="closeRepeatModal()" style="opacity:1">${ic('x',16)}</button>
+    </div>
+    <input id="repeatTaskInput" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="What repeats?" onkeydown="if(event.key==='Enter')saveRepeatTask(); if(event.key==='Escape')closeRepeatModal()">
+    <div style="font-size:11px;font-weight:700;color:var(--tt);text-transform:uppercase;letter-spacing:.06em;margin:8px 2px 6px">Frequency</div>
+    <div class="add-where"><button id="rf-daily" class="on" onclick="setRepeatFreq('daily')">Daily</button><button id="rf-weekly" onclick="setRepeatFreq('weekly')">Weekly</button><button id="rf-monthly" onclick="setRepeatFreq('monthly')">Monthly</button></div>
+    <div style="font-size:11px;font-weight:700;color:var(--tt);text-transform:uppercase;letter-spacing:.06em;margin:10px 2px 6px">Priority</div>
+    <div class="add-prio-row"><button id="rp-high" class="qbtn high" onclick="setRepeatPriority('high')">High</button><button id="rp-med" class="qbtn med" onclick="setRepeatPriority('med')">Medium</button><button id="rp-low" class="qbtn low" onclick="setRepeatPriority('low')">Low</button></div>
+    <label style="display:flex;align-items:center;gap:8px;margin:14px 2px 12px;color:var(--st);font-size:14px;font-weight:600;cursor:pointer">
+      <input id="repeatFocusInput" type="checkbox" style="width:18px;height:18px;accent-color:var(--inf)"> Add to Daily Focus
+    </label>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="sbtn" onclick="closeRepeatModal()" style="flex:1">Cancel</button>
+      <button class="pbtn" onclick="saveRepeatTask()" style="flex:1">Save</button>
+    </div>
+  </div>`;
+  box.onclick=closeRepeatModal; document.body.appendChild(box); setRepeatPriority('med'); setTimeout(()=>document.getElementById('repeatTaskInput')?.focus(),30);
 }
+function closeRepeatModal(){document.getElementById('_repeatBox')?.remove();}
+function setRepeatFreq(freq){
+  repeatFreq=freq;
+  ['daily','weekly','monthly'].forEach(f=>document.getElementById('rf-'+f)?.classList.toggle('on',f===freq));
+}
+function setRepeatPriority(priority){
+  repeatPriority=priority;
+  ['high','med','low'].forEach(p=>{
+    const b=document.getElementById('rp-'+p);
+    if(b)b.style.outline=p===priority?`2px solid ${PC[p]}`:'';
+  });
+}
+function saveRepeatTask(){
+  const el=document.getElementById('repeatTaskInput');
+  const text=(el?.value||'').trim().replace(/\s+/g,' ');
+  if(!text){showToast('Add a task name first');return;}
+  D.recurring=D.recurring||[];
+  const focus=!!document.getElementById('repeatFocusInput')?.checked;
+  D.recurring.push({id:nid(),text,freq:repeatFreq,priority:repeatPriority,created:TD,last:'',focus});
+  generateRecurringTasks();
+  closeRepeatModal();
+  dosave2();
+  re();
+  showToast('Recurring task added');
+}
+function addRecurringPrompt(){openRepeatModal();}
 function openReview(){psv('daily');}
 function openSearch(){
   let box=document.getElementById('_searchBox'); if(box){box.remove();return;}
@@ -836,15 +883,17 @@ function renderMoreMenu(){
   const hide=D.ui&&D.ui.hideDone;
   m.innerHTML=`
     <button class="cmi" onclick="toggleHideDone();closeMoreMenu()">${hide?'Show':'Hide'} completed</button>
-    <button class="cmi" onclick="addRecurringPrompt();closeMoreMenu()">Repeat task…</button>
+    <button class="cmi" onclick="closeMoreMenu();openRepeatModal()">Repeat task…</button>
     <div class="cmsep"></div>
     <button class="cmi" onclick="exportData();closeMoreMenu()">Export backup</button>
     <button class="cmi" onclick="importData();closeMoreMenu()">Import backup</button>
   `;
 }
 let addTarget='daily';
+let addPickedDate=TD;
 function openAddModal(target='daily'){
   addTarget=target;
+  addPickedDate=TD;
   let box=document.getElementById('_addBox'); if(box){box.remove();return;}
   box=document.createElement('div');box.id='_addBox';box.className='add-backdrop';
   box.innerHTML=`<div class="add-modal" onclick="event.stopPropagation()">
@@ -852,17 +901,25 @@ function openAddModal(target='daily'){
       <div style="font-size:18px;font-weight:800;color:var(--pt)">Add task</div>
       <button class="bact" onclick="closeAddModal()" style="opacity:1">${ic('x',16)}</button>
     </div>
-    <div class="add-where"><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button></div>
+    <div class="add-where"><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button><button id="aw-pick" onclick="setAddTarget('pick')">Pick date</button></div>
+    <input id="addDateInput" type="date" value="${TD}" onchange="addPickedDate=this.value||TD" style="display:none;width:100%;border:1px solid var(--bd2);border-radius:14px;background:var(--bg);color:var(--pt);font-size:15px;font-family:var(--fnt);padding:10px 12px;outline:none;margin:0 0 10px">
     <input id="addModalInput" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="What do you need to do?" onkeydown="if(event.key==='Enter')modalAdd('med'); if(event.key==='Escape')closeAddModal()">
     <div class="add-prio-row"><button class="qbtn high" onclick="modalAdd('high')">High</button><button class="qbtn med" onclick="modalAdd('med')">Medium</button><button class="qbtn low" onclick="modalAdd('low')">Low</button></div>
   </div>`;
-  box.onclick=closeAddModal; document.body.appendChild(box); setTimeout(()=>document.getElementById('addModalInput')?.focus(),30);
+  box.onclick=closeAddModal; document.body.appendChild(box); setAddTarget(addTarget); setTimeout(()=>document.getElementById('addModalInput')?.focus(),30);
 }
-function setAddTarget(t){addTarget=t;document.getElementById('aw-daily')?.classList.toggle('on',t==='daily');document.getElementById('aw-tomorrow')?.classList.toggle('on',t==='tomorrow');}
+function setAddTarget(t){
+  addTarget=t;
+  document.getElementById('aw-daily')?.classList.toggle('on',t==='daily');
+  document.getElementById('aw-tomorrow')?.classList.toggle('on',t==='tomorrow');
+  document.getElementById('aw-pick')?.classList.toggle('on',t==='pick');
+  const dateInput=document.getElementById('addDateInput');
+  if(dateInput){dateInput.style.display=t==='pick'?'block':'none'; if(t==='pick')addPickedDate=dateInput.value||TD;}
+}
 function closeAddModal(){document.getElementById('_addBox')?.remove();}
 function modalAdd(priority='med'){
   const el=document.getElementById('addModalInput'); const text=(el?.value||'').trim().replace(/\s+/g,' '); if(!text)return;
-  const date=addTarget==='tomorrow'?ad(TD,1):(S.v==='daily'?S.d:TD);
+  const date=addTarget==='tomorrow'?ad(TD,1):(addTarget==='pick'?(document.getElementById('addDateInput')?.value||addPickedDate||TD):(S.v==='daily'?S.d:TD));
   tf(date).push({id:nid(),text,priority,done:false});
   if(el)el.value=''; closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
 }
@@ -888,11 +945,11 @@ function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
   const prioOpts=['high','med','low'].map(p=>`<button class="popt ptag ${p}" onclick="chPrio('${ctx}','${item.id}','${p}','${kind}')" style="${(prio||item.priority)===p?`outline:2px solid ${PC[p]};font-weight:700`:''}">${PL[p]}</button>`).join('');
   const wgMove=kind==='wg'?`<button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,-7)}');menuSt=null;event.stopPropagation()">${ic('arrow-left',14,'color:var(--tt)')} Prev week</button><button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,7)}');menuSt=null;event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Next week</button>`:'';
-  const prioSection=(kind==='task'||kind==='wg')?`<div class="cmsep"></div><div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div><div class="cmsep"></div>`:'';
+  const editBtn=kind==='task'?'':`<button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>`;
+  const prioSection=(kind==='task'||kind==='wg')?`<div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
-    <button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>
-    ${wgMove}${prioSection}
+    ${editBtn}${wgMove}${prioSection}
   </div>`;
 }
 
