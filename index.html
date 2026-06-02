@@ -542,8 +542,8 @@ function addFH(key,p,type,ctx){
   return`<div class="add-inline">
     <span style="width:18px;flex-shrink:0"></span>
     ${fakeCheck}
-    <input id="ai-${key}" placeholder="Type and press Enter…" onkeydown="inlineAdd(event,'${type}','${ctx}','${p}','${key}')" onblur="blurSave('${key}','${type}','${ctx}','${p}')">
-    ${prioTag}
+<input id="ai-${key}" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="Type and press Enter…" onkeydown="inlineAdd(event,'${type}','${ctx}','${p}','${key}')" onblur="blurSave('${key}','${type}','${ctx}','${p}')">
+${prioTag}
   </div>`;
 }
 function focusAdd(key){setTimeout(()=>{const i=document.getElementById('ai-'+key);if(i)i.focus();},20);}
@@ -878,7 +878,7 @@ function tBlock(t,prio,ctx){
       <input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${ctx}','${t.id}')" onclick="event.stopPropagation()">
       <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${ctx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
       ${isEdit
-        ?`<input id="ei-${t.id}" class="binp" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${ctx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${ctx}','task')">`
+        ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${ctx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${ctx}','task')">`
         :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${ctx}','task')">${ec(t.text)}</span>`}
       ${carriedHTML(t)}
       <div class="row-actions"><button class="bact" onclick="movePn={kind:'task',id:'${t.id}',from:'${ctx}',wo:0};re();event.stopPropagation()" title="Move">${ic('calendar',14)}</button>${cMenuHTML(t,ctx,'task',prio)}</div>
@@ -894,7 +894,7 @@ function gBlock(g,prio,ctx,kind){
     <input type="checkbox" ${g.done?'checked':''} onchange="togItem('${kind}','${ctx}','${g.id}')" onclick="event.stopPropagation()">
     ${prio&&kind!=='wg'?`<span class="ptag ${prio}" style="font-size:11px;${g.done?'opacity:.4':''}">${PL[prio]}</span>`:''}
     ${isEdit
-      ?`<input id="ei-${g.id}" class="binp" value="${ec(g.text)}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="editKey(event,'${g.id}','${ctx}','${kind}')">`
+      ?`<input id="ei-${g.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(g.text)}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="editKey(event,'${g.id}','${ctx}','${kind}')">`
       :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)}</span>`}
     <div class="gacts">${cMenuHTML(g,ctx,kind,prio)}</div>
   </div>`;
