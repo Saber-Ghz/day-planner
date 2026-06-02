@@ -662,18 +662,35 @@ function openMenu(id){
     document.addEventListener('click',h);
   },50);
 }
+function findTaskDate(id,preferredCtx){
+  if(preferredCtx && D.tasks && Array.isArray(D.tasks[preferredCtx]) && D.tasks[preferredCtx].some(t=>t&&t.id===id))return preferredCtx;
+  const keys=Object.keys(D.tasks||{});
+  for(const dt of keys){
+    const arr=D.tasks[dt]||[];
+    if(arr.some(t=>t&&t.id===id))return dt;
+  }
+  return preferredCtx;
+}
+function findTask(ctx,id){
+  const realCtx=findTaskDate(id,ctx);
+  const task=realCtx?tf(realCtx).find(t=>t&&t.id===id):null;
+  return {ctx:realCtx,task};
+}
 function chPrio(ctx,id,p,kind){
-  if(kind==='task'){const t=tf(ctx).find(t=>t.id===id);if(t)t.priority=p;}
+  if(kind==='task'){
+    const r=findTask(ctx,id);if(r.task)r.task.priority=p;
+  }
   else if(kind==='wg'){const g=wgf(ctx).find(g=>g.id===id);if(g)g.priority=p;}
   menuSt=null;dosave2();re();
 }
 function startEdit(id,ctx,kind){
+  if(kind==='task')ctx=findTaskDate(id,ctx);
   editSt={id,ctx,kind};menuSt=null;re();
   setTimeout(()=>{const inp=document.getElementById('ei-'+id);if(inp){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);}},30);
 }
 function saveEdit(id,ctx,val,kind){
   const v=val.trim();
-  if(kind==='task'){const t=tf(ctx).find(t=>t.id===id);if(t&&v)t.text=v;}
+  if(kind==='task'){const r=findTask(ctx,id);if(r.task&&v)r.task.text=v;}
   else if(kind==='wg'){const g=wgf(ctx).find(g=>g.id===id);if(g&&v)g.text=v;}
   else if(kind==='mg'){const g=gf(ctx).find(g=>g.id===id);if(g&&v)g.text=v;}
   editSt=null;dosave2();re();
@@ -685,8 +702,8 @@ function editKey(e,id,ctx,kind){
 let justDone=null;
 function togItem(kind,ctx,id){
   if(kind==='task'){
-    const t=tf(ctx).find(t=>t.id===id);
-    if(t){if(!t.done)justDone=id;t.done=!t.done;}
+    const r=findTask(ctx,id);
+    if(r.task){if(!r.task.done)justDone=id;r.task.done=!r.task.done;}
   }
   else if(kind==='wg'){const g=wgf(ctx).find(g=>g.id===id);if(g)g.done=!g.done;}
   else if(kind==='mg'){const g=gf(ctx).find(g=>g.id===id);if(g)g.done=!g.done;}
@@ -694,7 +711,10 @@ function togItem(kind,ctx,id){
   setTimeout(()=>{justDone=null;},650);
 }
 function delItem(kind,ctx,id){
-  if(kind==='task')D.tasks[ctx]=tf(ctx).filter(t=>t.id!==id);
+  if(kind==='task'){
+    const realCtx=findTaskDate(id,ctx);
+    if(realCtx)D.tasks[realCtx]=tf(realCtx).filter(t=>t.id!==id);
+  }
   else if(kind==='wg')D.wg[ctx]=wgf(ctx).filter(g=>g.id!==id);
   else if(kind==='mg')D.mg[ctx]=gf(ctx).filter(g=>g.id!==id);
   menuSt=null;movePn=null;dosave2();re();
@@ -702,6 +722,7 @@ function delItem(kind,ctx,id){
 
 function movePH(id,from){
   if(!movePn||movePn.id!==id)return'';
+  from=findTaskDate(id,from);
   const wkS=ad(monOf(from),movePn.wo*7);
   const dates=Array.from({length:7},(_,i)=>ad(wkS,i));
   const d0=pd(dates[0]),d6=pd(dates[6]);
@@ -729,8 +750,15 @@ function movePH(id,from){
   </div>`;
 }
 function mvTask(id,from,to){
+  from=findTaskDate(id,from);
   const arr=tf(from);const fi=arr.findIndex(t=>t.id===id);if(fi<0)return;
-  const[t]=arr.splice(fi,1);tf(to).push(t);movePn=null;dosave2();S.d=to;re();
+  const[t]=arr.splice(fi,1);
+  if(to!==from){
+    if(t.carriedFrom && to===TD) t.carriedFrom=t.carriedFrom;
+    else if(t.carriedFrom) delete t.carriedFrom;
+    tf(to).push(t);
+  }else arr.splice(fi,0,t);
+  movePn=null;dosave2();S.d=to;re();
 }
 function mvWG(id,fw,tw){
   const arr=wgf(fw);const fi=arr.findIndex(g=>g.id===id);if(fi<0)return;
@@ -749,7 +777,7 @@ function quickAddKey(e){if(e.key==='Enter'){e.preventDefault();quickAdd('med');}
 function goToday(){S.d=TD;S.mv=mk(TD);addSt=null;editSt=null;menuSt=null;movePn=null;re();}
 function toggleHideDone(){D.ui.hideDone=!D.ui.hideDone;dosave2();re();}
 function updateHideBtn(){renderMoreMenu();}
-function toggleFocus(ctx,id){const t=tf(ctx).find(x=>x.id===id); if(t){t.focus=!t.focus;menuSt=null;dosave2();re();}}
+function toggleFocus(ctx,id){const r=findTask(ctx,id); const t=r.task; if(t){t.focus=!t.focus;menuSt=null;dosave2();re();}}
 function focusHTML(dt){
   const items=tf(dt).filter(t=>t.focus&&!t.done);
   if(!items.length)return'';
@@ -859,31 +887,31 @@ function carriedSectionHTML(dt,tasks){
 function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
   const prioOpts=['high','med','low'].map(p=>`<button class="popt ptag ${p}" onclick="chPrio('${ctx}','${item.id}','${p}','${kind}')" style="${(prio||item.priority)===p?`outline:2px solid ${PC[p]};font-weight:700`:''}">${PL[p]}</button>`).join('');
-  const moveBtn=kind==='task'?`<button class="cmi" onclick="movePn={kind:'task',id:'${item.id}',from:'${ctx}',wo:0};menuSt=null;re();event.stopPropagation()">${ic('calendar',14,'color:var(--tt)')} Move to day…</button>`:'';
   const wgMove=kind==='wg'?`<button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,-7)}');menuSt=null;event.stopPropagation()">${ic('arrow-left',14,'color:var(--tt)')} Prev week</button><button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,7)}');menuSt=null;event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Next week</button>`:'';
   const prioSection=(kind==='task'||kind==='wg')?`<div class="cmsep"></div><div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div><div class="cmsep"></div>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
-    ${moveBtn}${wgMove}${prioSection}
-    <button class="cmi danger" onclick="delItem('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('trash',14)} Delete</button>
+    <button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>
+    ${wgMove}${prioSection}
   </div>`;
 }
 
 function tBlock(t,prio,ctx){
+  const sourceCtx=findTaskDate(t.id,t.carriedFrom||ctx);
   const isEdit=editSt&&editSt.id===t.id;
   const isMove=movePn&&movePn.id===t.id;
-  return`<div data-did="${t.id}" data-dprio="${prio}" data-dctx="${ctx}">
+  return`<div data-did="${t.id}" data-dprio="${prio}" data-dctx="${sourceCtx}">
     <div class="block${justDone===t.id?' just-done':''}">
-      <span class="dh" onpointerdown="drS(event,{kind:'task',id:'${t.id}',prio:'${prio}',ctx:'${ctx}'})">${ic('grip',14)}</span>
-      <input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${ctx}','${t.id}')" onclick="event.stopPropagation()">
-      <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${ctx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
+      <span class="dh" onpointerdown="drS(event,{kind:'task',id:'${t.id}',prio:'${prio}',ctx:'${sourceCtx}'})">${ic('grip',14)}</span>
+      <input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${sourceCtx}','${t.id}')" onclick="event.stopPropagation()">
+      <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${sourceCtx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
       ${isEdit
-        ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${ctx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${ctx}','task')">`
-        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${ctx}','task')">${ec(t.text)}</span>`}
+        ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${sourceCtx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${sourceCtx}','task')">`
+        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)}</span>`}
       ${carriedHTML(t)}
-      <div class="row-actions"><button class="bact" onclick="movePn={kind:'task',id:'${t.id}',from:'${ctx}',wo:0};re();event.stopPropagation()" title="Move">${ic('calendar',14)}</button>${cMenuHTML(t,ctx,'task',prio)}</div>
+      <div class="row-actions"><button class="bact" onclick="movePn={kind:'task',id:'${t.id}',from:'${sourceCtx}',wo:0};re();event.stopPropagation()" title="Move">${ic('calendar',14)}</button><button class="bact" onclick="delItem('task','${sourceCtx}','${t.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(t,sourceCtx,'task',prio)}</div>
     </div>
-    ${isMove?movePH(t.id,ctx):''}
+    ${isMove?movePH(t.id,sourceCtx):''}
   </div>`;
 }
 
