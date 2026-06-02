@@ -825,7 +825,7 @@ function openAddModal(target='daily'){
       <button class="bact" onclick="closeAddModal()" style="opacity:1">${ic('x',16)}</button>
     </div>
     <div class="add-where"><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button></div>
-    <input id="addModalInput" placeholder="What do you need to do?" onkeydown="if(event.key==='Enter')modalAdd('med'); if(event.key==='Escape')closeAddModal()">
+    <input id="addModalInput" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="What do you need to do?" onkeydown="if(event.key==='Enter')modalAdd('med'); if(event.key==='Escape')closeAddModal()">
     <div class="add-prio-row"><button class="qbtn high" onclick="modalAdd('high')">High</button><button class="qbtn med" onclick="modalAdd('med')">Medium</button><button class="qbtn low" onclick="modalAdd('low')">Low</button></div>
   </div>`;
   box.onclick=closeAddModal; document.body.appendChild(box); setTimeout(()=>document.getElementById('addModalInput')?.focus(),30);
