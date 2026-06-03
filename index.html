@@ -936,7 +936,9 @@ function summaryHTML(dt,allDayTasks){
   </div>`;
 }
 function carriedSectionHTML(dt,tasks){
-  const carried=tasks.filter(t=>t.carriedFrom&&!t.done);
+  // Daily Focus is a filtered view. Focused tasks stay in the same data position,
+  // but they are hidden from Carried/priority lists while focus is on.
+  const carried=tasks.filter(t=>t.carriedFrom&&!t.done&&!t.focus);
   if(!carried.length)return'';
   return `<div class="carried-card"><div class="sh">${ic('arrow-right',13)}&thinsp;Carried from previous days</div><div class="dzone">${carried.map(t=>tBlock(t,t.priority||'med',dt)).join('')}</div></div>`;
 }
@@ -990,9 +992,11 @@ function rd(){
   const done=allDayTasks.filter(t=>t.done).length,total=allDayTasks.length;
   const note=D.dn[dt]||'',isT=dt===TD;
   const pct=total>0?Math.round(done/total*100):0,allDone=total>0&&done===total;
-  const carriedOpen=visibleTasks.filter(t=>t.carriedFrom&&!t.done);
+  const carriedOpen=visibleTasks.filter(t=>t.carriedFrom&&!t.done&&!t.focus);
   const doneTasks=(D.ui&&D.ui.hideDone)?[]:allDayTasks.filter(t=>t.done);
-  const regularTasks=visibleTasks.filter(t=>!t.done && !(t.carriedFrom&&!t.done));
+  // Hide focused tasks from normal priority sections to avoid duplicate display.
+  // Turning focus off makes them appear back here in their original array order.
+  const regularTasks=visibleTasks.filter(t=>!t.done && !t.focus && !(t.carriedFrom&&!t.done));
 
   const secs=['high','med','low'].map(p=>{
     const pts=regularTasks.filter(t=>t.priority===p);
