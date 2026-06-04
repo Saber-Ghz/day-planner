@@ -305,6 +305,47 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
   .add-modal{transform:none!important}
 }
 
+
+
+/* v8.3 weekly overview cleanup: weekly view is scan-only, daily view is detail */
+.wcols{align-items:start}
+.bcol{min-height:148px;cursor:pointer;transition:transform .12s,box-shadow .12s,opacity .12s}
+.bcol:hover{transform:translateY(-1px)}
+.bcol.week-empty{opacity:.78}
+.week-status{font-size:10px;font-weight:700;color:var(--st);margin-top:4px;line-height:1.25;white-space:nowrap}
+.week-status.done{color:var(--suc)}
+.week-status.empty{color:var(--tt);font-weight:600}
+.bcard.week-task{background:var(--bg3);border-radius:9px;padding:7px 8px;margin-bottom:5px}
+.bcard.week-more{background:transparent;color:var(--st);font-size:11px;font-weight:700;padding:3px 2px;margin-bottom:0;cursor:pointer}
+.bcard.week-more:hover{background:transparent;color:var(--inf);opacity:1}
+.week-empty-line{font-size:11px;color:var(--tt);font-weight:600;margin-top:12px}
+.week-empty-line{font-size:11px;color:var(--tt);font-weight:600;margin-top:12px}
+
+/* Weekly task dots final polish */
+#vw .bcard.week-task{
+  width:8px;
+  height:8px;
+  padding:0;
+  margin:10px 6px 0 0;
+  display:inline-flex;
+  background:transparent;
+  box-shadow:none;
+}
+
+#vw .bcard.week-task span{
+  width:7px !important;
+  height:7px !important;
+}
+
+#vw .bcard.week-task div div{
+  display:none;
+}
+
+#vw .bcard.week-more{
+  margin-top:9px;
+  font-size:10px;
+  color:var(--st);
+}
 </style>
 
 <div style="padding:1.25rem 0 2.5rem;background:var(--bg);min-height:100%;font-family:var(--fnt)">
@@ -948,7 +989,7 @@ function cMenuHTML(item,ctx,kind,prio){
   const prioOpts=['high','med','low'].map(p=>`<button class="popt ptag ${p}" onclick="chPrio('${ctx}','${item.id}','${p}','${kind}')" style="${(prio||item.priority)===p?`outline:2px solid ${PC[p]};font-weight:700`:''}">${PL[p]}</button>`).join('');
   const wgMove=kind==='wg'?`<button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,-7)}');menuSt=null;event.stopPropagation()">${ic('arrow-left',14,'color:var(--tt)')} Prev week</button><button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,7)}');menuSt=null;event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Next week</button>`:'';
   const editBtn=kind==='task'?'':`<button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>`;
-  const prioSection=(kind==='task'||kind==='wg')?`<div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div>`:'';
+  const prioSection=(kind==='task')?`<div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
     ${editBtn}${wgMove}${prioSection}
@@ -1065,28 +1106,39 @@ function rw(){
   let wD=0,wT=0;
   const cols=dates.map((dt,i)=>{
     const tasks=tf(dt),done=tasks.filter(t=>t.done).length,total=tasks.length;
+    const left=total-done;
     wD+=done;wT+=total;
     const pct=total>0?Math.round(done/total*100):0,allDone=total>0&&done===total;
     const isToday=dt===TD;
     const pOrder={high:0,med:1,low:2};
-    const sorted=[...(D.ui&&D.ui.hideDone?tasks.filter(t=>!t.done):tasks)].sort((a,b)=>(pOrder[a.priority]??1)-(pOrder[b.priority]??1));
-    const cards=sorted.length===0?'':sorted.map(t=>`<div class="bcard" onclick="S.d='${dt}';psv('daily')" onmouseenter="showTip(event,'${ec(t.text)}','${t.priority}')" onmouseleave="hideTip()" style="${t.done?'opacity:.4':''}">
-          <div style="display:flex;align-items:center;gap:5px;min-width:0">
+    const unfinished=tasks.filter(t=>!t.done).sort((a,b)=>(pOrder[a.priority]??1)-(pOrder[b.priority]??1));
+    const visible=unfinished.slice(0,3);
+    const moreCount=Math.max(0,unfinished.length-visible.length);
+   const status=total===0
+  ?`<div class="week-status empty">No tasks</div>`
+  :allDone
+    ?`<div class="week-status done">Done</div>`
+    :`<div class="week-status">${left} left${done>0?` · ${done} done`:''}</div>`;
+    const cards=visible.map(t=>`<div class="bcard week-task" onclick="event.stopPropagation();S.d='${dt}';psv('daily')" onmouseenter="showTip(event,'${ec(t.text)}','${t.priority}')" onmouseleave="hideTip()">
+          <div style="display:flex;align-items:center;gap:6px;min-width:0">
             <span style="width:6px;height:6px;border-radius:50%;background:${PC[t.priority]};flex-shrink:0;display:inline-block"></span>
-            <div style="font-size:11px;line-height:1.4;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;${t.done?'text-decoration:line-through;color:var(--tt)':'color:var(--pt)'}">${ec(t.text)}</div>
+            <div style="font-size:12px;line-height:1.35;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;flex:1;color:var(--pt);font-weight:500">${ec(t.text)}</div>
           </div>
         </div>`).join('');
-    return`<div class="bcol${isToday?' today-col':''}">
-      <div style="margin-bottom:6px">
-        <div style="font-size:9px;font-weight:600;color:var(--tt);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">${DNS[i]}</div>
-        <div style="font-size:17px;font-weight:700;color:${isToday?'var(--inf)':'var(--pt)'};line-height:1">${pd(dt).getDate()}</div>
-        ${total>0?`<div style="font-size:10px;color:${allDone?'var(--suc)':'var(--tt)'};margin-top:2px">${done}/${total}</div>
-          <div style="height:2px;background:var(--bd);border-radius:2px;margin-top:2px">
-            <div style="height:100%;width:${pct}%;background:${allDone?'var(--suc)':'var(--inf)'};border-radius:2px"></div>
-          </div>`:''}
+    const more=moreCount?`<div class="bcard week-more" onclick="event.stopPropagation();S.d='${dt}';psv('daily')">+${moreCount} more</div>`:'';
+   const emptyLine='';
+    return`<div class="bcol${isToday?' today-col':''}${total===0?' week-empty':''}" onclick="S.d='${dt}';psv('daily')">
+      <div style="margin-bottom:10px">
+        <div style="font-size:9px;font-weight:700;color:var(--tt);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px">${DNS[i]}</div>
+        <div style="font-size:20px;font-weight:800;color:${isToday?'var(--inf)':'var(--pt)'};line-height:1">${pd(dt).getDate()}</div>
+        ${status}
+        ${total>0?`<div style="height:3px;background:var(--bd);border-radius:3px;margin-top:7px">
+          <div style="height:100%;width:${pct}%;background:${allDone?'var(--suc)':'var(--inf)'};border-radius:3px"></div>
+        </div>`:''}
       </div>
       ${cards}
-      <button class="add-line" style="font-size:11px;padding:2px 3px;margin-top:2px" onclick="S.d='${dt}';psv('daily')">${ic('plus',11,'color:var(--tt)')} New</button>
+      ${more}
+      ${emptyLine}
     </div>`;
   }).join('');
   const d0=pd(dates[0]),d6=pd(dates[6]);
@@ -1095,23 +1147,19 @@ function rw(){
   const isCurrentWeek=wk===monOf(TD);
   const wpct=wT>0?Math.round(wD/wT*100):0;
   const dG=goals.filter(g=>g.done).length;
-  const goalSecs=['high','med','low'].map(p=>{
-    const gp=goals.filter(g=>g.priority===p);
-    const key='wg-'+wk+'-'+p;
-    const colKey='col-wg-'+p;
-    const isCol=!!collapsed[colKey];
-    const badge=isCol&&gp.length?`<span style="font-size:10px;font-weight:600;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${gp.length}</span>`:'';
-    const chevron=`<span class="col-chevron" style="transform:rotate(${isCol?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>`;
-    return`<div class="sec-wrap" style="margin-bottom:2px">
-      <div class="sh sh-toggle" style="margin-top:10px" onclick="collapsed['${colKey}']=!collapsed['${colKey}'];re()">
-        ${ic('dot',8,`color:${PC[p]};margin-right:1px`)}&thinsp;${PL[p]}${badge}${chevron}
-      </div>
-      ${isCol?'':` <div class="dzone" data-zone data-zprio="${p}" data-zctx="${wk}">
-        ${gp.map(g=>gBlock(g,p,wk,'wg')).join('')}
-      </div>
-      ${addFH(key,p,'wg',wk)}`}
-    </div>`;
-  }).join('');
+  const goalsColKey='col-wg';
+  const goalsCollapsed=!!collapsed[goalsColKey];
+  const weeklyGoalsHTML=`<div class="sec-wrap">
+    <div class="sh sh-toggle" style="margin-top:0" onclick="collapsed['${goalsColKey}']=!collapsed['${goalsColKey}'];re()">
+      ${ic('target',13)}&thinsp;Weekly goals
+      ${goalsCollapsed&&goals.length?`<span style="font-size:10px;font-weight:600;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${goals.length}</span>`:''}
+      <span class="col-chevron" style="transform:rotate(${goalsCollapsed?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
+    </div>
+    ${goalsCollapsed?'':`<div class="dzone" data-zone data-zprio="" data-zctx="${wk}">
+      ${goals.map(g=>gBlock(g,'',wk,'wg')).join('')}
+    </div>
+    ${addFH('wg-'+wk,'','wg',wk)}`}
+  </div>`;
 
   document.getElementById('vw').innerHTML=`
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px">
@@ -1121,15 +1169,14 @@ function rw(){
           <span class="ph" style="color:${isCurrentWeek?'var(--inf)':'var(--pt)'}">${hdr}</span>
           ${isCurrentWeek?`<span style="font-size:11px;font-weight:700;color:var(--inf);background:var(--inf-bg);padding:3px 9px;border-radius:20px;letter-spacing:.02em">This Week</span>`:''}
         </div>
-        <div class="pmeta"><span class="schip">${wD}/${wT} tasks</span><span class="schip">${dG}/${goals.length} goals</span></div>
+        <div class="pmeta"><span class="schip">${wT-wD} left</span><span class="schip">${wD}/${wT} done</span><span class="schip">${dG}/${goals.length} goals</span></div>
       </div>
       <button class="nnb" onclick="S.d=ad(S.d,7);addSt=null;editSt=null;re()">${ic('chevron-right',18)}</button>
     </div>
     <div class="prog"><div class="progf" style="width:${wpct}%"></div></div>
     <div class="wcols">${cols}</div>
     <div class="ndiv"></div>
-    <div class="sh" style="margin-top:0">${ic('target',13)}&thinsp;Weekly goals</div>
-    ${goalSecs}
+    ${weeklyGoalsHTML}
     <div class="ndiv"></div>
     <div class="sh">${ic('notes',13)}&thinsp;Weekly reflection</div>
     <textarea class="n-ta" placeholder="Accomplishments, carry-overs, patterns to address…" oninput="D.wn['${wk}']=this.value;dosave2()">${ec(note)}</textarea>`;
