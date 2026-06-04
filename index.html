@@ -248,16 +248,28 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .sum-num{font-size:13px;font-weight:800;color:var(--pt);line-height:1}
 .sum-lab{font-size:13px;font-weight:650;color:var(--st);text-transform:none;letter-spacing:0;margin-top:0}
 .summary-card.is-simple .sum-item:not(:first-child){display:none}
+.goal-panel{background:var(--bg2);border:1px solid var(--bd);border-radius:18px;box-shadow:var(--shadow);padding:12px 14px;margin:0 0 14px;position:relative;overflow:hidden}
+.goal-panel::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--inf-bg)}
+.goal-panel .sh{margin:0 0 10px}
+.goal-panel .sh-toggle{margin-left:0}
+.goal-panel .dzone{background:transparent}
+.goal-panel .add-line{margin-top:8px}
+.goal-panel.monthly::before{background:var(--war-bg)}
 .carried-card{background:var(--bg2);border:1px solid var(--bd);border-radius:16px;box-shadow:var(--shadow);padding:0;margin:0 0 14px;overflow:visible;position:relative;z-index:2}
 .carried-card .dzone{overflow:visible;position:relative;z-index:3}
 .carried-card .block:has(.cmenu){z-index:30}
 .carried-card .row-actions{position:relative;z-index:40}
 .carried-card .sh{margin:10px 14px 8px}
-.starbtn{border:none;background:none;color:var(--tt);cursor:pointer;width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0}
-.starbtn.on{color:var(--inf);background:var(--inf-bg)}
+.starbtn{border:none;background:none;color:var(--tt);cursor:pointer;width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;opacity:1;transition:opacity .12s,background .12s,color .12s}
+.starbtn.on{color:var(--inf);background:var(--inf-bg);opacity:1}
 .starbtn:hover{background:var(--bg3);color:var(--inf)}
 .row-actions{opacity:0;display:flex;gap:2px;align-items:center;transition:opacity .1s;flex-shrink:0}
 .block:hover .row-actions,.goalbk:hover .row-actions{opacity:1}
+@media(hover:hover){
+  .block .starbtn:not(.on){opacity:0}
+  .block:hover .starbtn:not(.on),
+  .block:focus-within .starbtn:not(.on){opacity:.45}
+}
 .fab{position:fixed;right:28px;bottom:28px;width:58px;height:58px;border:none;border-radius:999px;background:var(--inf);color:white;box-shadow:0 12px 36px rgba(0,122,255,.35);font-size:30px;font-weight:500;cursor:pointer;z-index:700;display:flex;align-items:center;justify-content:center;line-height:1;transition:transform .12s,opacity .12s}
 .fab:hover{transform:translateY(-2px)}
 .add-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.26);z-index:9998;display:flex;align-items:center;justify-content:center;padding:16px}
@@ -318,7 +330,6 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .bcard.week-task{background:var(--bg3);border-radius:9px;padding:7px 8px;margin-bottom:5px}
 .bcard.week-more{background:transparent;color:var(--st);font-size:11px;font-weight:700;padding:3px 2px;margin-bottom:0;cursor:pointer}
 .bcard.week-more:hover{background:transparent;color:var(--inf);opacity:1}
-.week-empty-line{font-size:11px;color:var(--tt);font-weight:600;margin-top:12px}
 .week-empty-line{font-size:11px;color:var(--tt);font-weight:600;margin-top:12px}
 
 /* Weekly task dots final polish */
@@ -964,18 +975,6 @@ function modalAdd(priority='med'){
   tf(date).push({id:nid(),text,priority,done:false});
   if(el)el.value=''; closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
 }
-function summaryHTML(dt,allDayTasks){
-  const left=allDayTasks.filter(t=>!t.done).length;
-  const focus=allDayTasks.filter(t=>t.focus&&!t.done).length;
-  const carried=allDayTasks.filter(t=>t.carriedFrom&&!t.done).length;
-  if(!allDayTasks.length)return'';
-  const simple=(focus===0&&carried===0);
-  return `<div class="summary-card${simple?' is-simple':''}">
-    <div class="sum-item"><span class="sum-num">${left}</span><span class="sum-lab">${left===1?'task':'tasks'} left</span></div>
-    <div class="sum-item"><span class="sum-num">${focus}</span><span class="sum-lab">focus</span></div>
-    <div class="sum-item"><span class="sum-num">${carried}</span><span class="sum-lab">carried</span></div>
-  </div>`;
-}
 function carriedSectionHTML(dt,tasks){
   // Daily Focus is a filtered view. Focused tasks stay in the same data position,
   // but they are hidden from Carried/priority lists while focus is on.
@@ -1149,10 +1148,10 @@ function rw(){
   const dG=goals.filter(g=>g.done).length;
   const goalsColKey='col-wg';
   const goalsCollapsed=!!collapsed[goalsColKey];
-  const weeklyGoalsHTML=`<div class="sec-wrap">
-    <div class="sh sh-toggle" style="margin-top:0" onclick="collapsed['${goalsColKey}']=!collapsed['${goalsColKey}'];re()">
+  const weeklyGoalsHTML=`<div class="goal-panel weekly">
+    <div class="sh sh-toggle" onclick="collapsed['${goalsColKey}']=!collapsed['${goalsColKey}'];re()">
       ${ic('target',13)}&thinsp;Weekly goals
-      ${goalsCollapsed&&goals.length?`<span style="font-size:10px;font-weight:600;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${goals.length}</span>`:''}
+      ${goals.length?`<span style="font-size:10px;font-weight:700;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${goals.filter(g=>g.done).length}/${goals.length} complete</span>`:''}
       <span class="col-chevron" style="transform:rotate(${goalsCollapsed?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
     </div>
     ${goalsCollapsed?'':`<div class="dzone" data-zone data-zprio="" data-zctx="${wk}">
@@ -1169,7 +1168,7 @@ function rw(){
           <span class="ph" style="color:${isCurrentWeek?'var(--inf)':'var(--pt)'}">${hdr}</span>
           ${isCurrentWeek?`<span style="font-size:11px;font-weight:700;color:var(--inf);background:var(--inf-bg);padding:3px 9px;border-radius:20px;letter-spacing:.02em">This Week</span>`:''}
         </div>
-        <div class="pmeta"><span class="schip">${wT-wD} left</span><span class="schip">${wD}/${wT} done</span><span class="schip">${dG}/${goals.length} goals</span></div>
+        <div class="pmeta"><span style="color:var(--pt)">${wD} of ${wT} done · </span><span style="color:var(--inf)">${wT-wD} left</span></div>
       </div>
       <button class="nnb" onclick="S.d=ad(S.d,7);addSt=null;editSt=null;re()">${ic('chevron-right',18)}</button>
     </div>
@@ -1199,18 +1198,20 @@ function rm(){
           <span class="ph" style="color:${isCurrentMonth?'var(--inf)':'var(--pt)'}">${MN[mo-1]} ${y}</span>
           ${isCurrentMonth?`<span style="font-size:11px;font-weight:700;color:var(--inf);background:var(--inf-bg);padding:3px 9px;border-radius:20px;letter-spacing:.02em">This Month</span>`:''}
         </div>
-        <div class="pmeta"><span class="schip">${dG}/${goals.length} goals</span><span class="schip">${mD}/${mT} tasks done</span></div>
+        <div class="pmeta" style="flex-direction:column;gap:1px;align-items:center">
+          <span style="color:var(--pt)">${dG} of ${goals.length} goals complete</span>
+          <span style="font-size:12px;color:var(--tt)">${mD} of ${mT} tasks done</span>
+        </div>
       </div>
       <button class="nnb" onclick="nm(1)">${ic('chevron-right',18)}</button>
     </div>
     <div class="prog"><div class="progf" style="width:${gPct}%;${gPct===100?'background:var(--suc)':''}"></div></div>
-    <div class="sec-wrap">
-    <div class="sh sh-toggle" style="margin-top:0" onclick="collapsed['col-mg']=!collapsed['col-mg'];re()">
-      ${ic('target',13)}&thinsp;Monthly goals
-      ${collapsed['col-mg']&&goals.length?`<span style="font-size:10px;font-weight:600;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${goals.length}</span>`:''}
-      <span class="col-chevron" style="transform:rotate(${collapsed['col-mg']?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
-    </div>
-    ${collapsed['col-mg']?'':`${gl}${addFH('mg-'+mv,'','mg',mv)}`}
+    <div class="goal-panel monthly">
+      <div class="sh sh-toggle" onclick="collapsed['col-mg']=!collapsed['col-mg'];re()">
+        ${ic('target',13)}&thinsp;Monthly goals
+        <span class="col-chevron" style="transform:rotate(${collapsed['col-mg']?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
+      </div>
+      ${collapsed['col-mg']?'':`${gl}${addFH('mg-'+mv,'','mg',mv)}`}
     </div>
     <div class="ndiv"></div>
     <div class="sh">${ic('notes',13)}&thinsp;Monthly reflection</div>
@@ -1227,7 +1228,6 @@ function exportData(){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  D.ui=D.ui||{};D.ui.lastBackup=TD;try{localStorage.setItem('pl3',JSON.stringify(D));}catch(e){}
   a.download=`planner-backup-${TD}.json`;
   document.body.appendChild(a);a.click();
   document.body.removeChild(a);URL.revokeObjectURL(url);
@@ -1240,7 +1240,11 @@ function mergePlannerData(imported){
   function sameItem(a,b){
     return String(a.text||'').trim()===String(b.text||'').trim()
       && String(a.priority||'')===String(b.priority||'')
-      && !!a.done===!!b.done;
+      && !!a.done===!!b.done
+      && !!a.focus===!!b.focus
+      && String(a.carriedFrom||'')===String(b.carriedFrom||'')
+      && String(a.repeat||'')===String(b.repeat||'')
+      && String(a.repeatId||'')===String(b.repeatId||'');
   }
   function mergeItemMap(section){
     Object.keys(incoming[section]||{}).forEach(key=>{
@@ -1311,7 +1315,8 @@ function showToast(msg){
 }
 
 // Theme toggle
-let _theme = localStorage.getItem('pl_theme') || 'auto';
+let _theme = (()=>{try{return localStorage.getItem('pl_theme') || 'auto';}catch(e){return 'auto';}})();
+function saveThemeSetting(v){try{localStorage.setItem('pl_theme',v);}catch(e){}}
 function applyTheme(){
   const root = document.documentElement;
   const btn = document.getElementById('themeBtn');
@@ -1338,22 +1343,8 @@ function toggleTheme(){
   const sysDark = window.matchMedia('(prefers-color-scheme:dark)').matches;
   const currentlyDark = _theme==='dark' || (_theme==='auto' && sysDark);
   _theme = currentlyDark ? 'light' : 'dark';
-  localStorage.setItem('pl_theme', _theme);
-  
-document.addEventListener('keydown',e=>{
-  const tag=(e.target&&e.target.tagName||'').toLowerCase();
-  if(tag==='input'||tag==='textarea'||e.metaKey||e.ctrlKey||e.altKey)return;
-  if(e.key==='n'||e.key==='N'){e.preventDefault();document.getElementById('quickAdd')?.focus();}
-  if(e.key==='t'||e.key==='T'){e.preventDefault();goToday();}
-  if(e.key==='d'||e.key==='D'){e.preventDefault();psv('daily');}
-  if(e.key==='w'||e.key==='W'){e.preventDefault();psv('weekly');}
-  if(e.key==='m'||e.key==='M'){e.preventDefault();psv('monthly');}
-  if(e.key==='/'){e.preventDefault();openSearch();}
-  if(e.key==='h'||e.key==='H'){e.preventDefault();toggleHideDone();}
-  if(e.key==='b'||e.key==='B'){e.preventDefault();exportData();}
-});
-
-applyTheme();
+  saveThemeSetting(_theme);
+  applyTheme();
 }
 
 document.addEventListener('keydown',e=>{
