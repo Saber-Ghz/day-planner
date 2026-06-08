@@ -108,6 +108,7 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .block:hover .bacts,.goalbk:hover .gacts{opacity:1}
 .bact{border:none;background:none;cursor:pointer;color:var(--tt);padding:4px 6px;border-radius:6px;display:inline-flex;align-items:center;transition:all .1s}
 .bact:hover{background:var(--bg3);color:var(--st)}
+.delete-action:hover,.delete-action:focus-visible{background:var(--dan-bg);color:var(--dan);outline:none}
 
 /* Priority tags — iOS pill style */
 .ptag{font-size:12px;padding:2px 9px;border-radius:20px;font-weight:600;flex-shrink:0;line-height:1.5;white-space:nowrap}
@@ -146,7 +147,7 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .sbtn:hover{background:var(--bg3)}
 
 /* Context menu — iOS popover */
-.cmenu{position:absolute;right:0;top:calc(100% + 8px);border-radius:14px;z-index:300;min-width:200px;padding:6px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
+.cmenu{position:fixed;right:auto;top:auto;border-radius:14px;z-index:300;min-width:min(200px,calc(100vw - 32px));max-width:calc(100vw - 32px);max-height:calc(100vh - 32px);overflow:auto;padding:6px;backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
 .cmenu{background:rgba(255,255,255,.92);box-shadow:0 8px 32px rgba(0,0,0,.14),0 2px 8px rgba(0,0,0,.06),0 0 0 .5px rgba(0,0,0,.06)}
 @media(prefers-color-scheme:dark){.cmenu{background:rgba(44,44,46,.95);box-shadow:0 8px 32px rgba(0,0,0,.6)}}
 .cmi{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:9px;cursor:pointer;font-size:14px;color:var(--pt);border:none;background:none;width:100%;text-align:left;font-family:var(--fnt);transition:background .1s}
@@ -156,6 +157,16 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .cmsep{height:.5px;background:var(--bd);margin:4px 0}
 .priorow{display:flex;gap:6px;padding:4px 8px 8px}
 .popt{font-size:12px;padding:5px 8px;border-radius:20px;cursor:pointer;font-weight:600;border:none;flex:1;text-align:center;font-family:var(--fnt);transition:all .1s}
+.note-indicator{border:none;background:transparent;color:var(--tt);width:20px;height:20px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;padding:0;margin-left:3px;vertical-align:-4px}
+.note-indicator:hover,.note-indicator:focus-visible{background:var(--inf-bg);color:var(--inf);outline:none}
+.note-indicator svg{width:13px;height:13px}
+@media(hover:none),(pointer:coarse){
+  .note-indicator{width:28px;height:28px;margin-left:2px;vertical-align:-8px}
+}
+.note-editor textarea{width:100%;min-height:120px;border:1px solid var(--bd2);border-radius:16px;background:var(--bg);color:var(--pt);font-size:15px;font-family:var(--fnt);line-height:1.5;padding:12px;outline:none;margin:8px 0 12px;resize:vertical}
+@media(hover:none),(pointer:coarse){
+  .bacts,.gacts,.row-actions,.dh{opacity:1}
+}
 
 /* Divider */
 .ndiv{height:.5px;background:var(--bd);margin:24px 0}
@@ -295,7 +306,7 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .done-today-soft .done-count{font-size:10px;font-weight:600;color:var(--tt);background:transparent;padding:0 2px;border-radius:0;margin-left:4px}
 
 /* v8.2 fix Done Today menu clipping */
-.done-today-soft .cmenu{z-index:900;right:8px;top:calc(100% + 4px)}
+.done-today-soft .cmenu{z-index:900}
 .done-today-soft .row-actions{position:relative;z-index:5}
 .done-today-soft .block:has(.cmenu){opacity:1;z-index:20}
 .done-today-soft .block:has(.cmenu) .row-actions{opacity:1}
@@ -507,6 +518,29 @@ function carryForwardUnfinishedTasks(){
   });
   return changed;
 }
+function carryForwardWeeklyGoals(targetWeek){
+  D.wg=D.wg||{};
+  const prevWeek=ad(targetWeek,-7);
+  const prev=Array.isArray(D.wg[prevWeek])?D.wg[prevWeek]:[];
+  const unfinished=prev.filter(g=>g&&!g.done&&String(g.text||'').trim());
+  if(!unfinished.length)return false;
+  const target=Array.isArray(D.wg[targetWeek])?D.wg[targetWeek]:(D.wg[targetWeek]=[]);
+  let changed=false;
+  unfinished.forEach(g=>{
+    const text=String(g.text||'').trim();
+    const sourceId=g.sourceId||g.id;
+    const exists=target.some(x=>x&&(
+      (sourceId&&x.sourceId===sourceId)||
+      (x.carriedFrom===prevWeek&&String(x.text||'').trim()===text)
+    ));
+    if(exists)return;
+    const copy={id:nid(),text,priority:g.priority||'med',done:false,carriedFrom:prevWeek,sourceId};
+    if(g.note)copy.note=g.note;
+    target.push(copy);
+    changed=true;
+  });
+  return changed;
+}
 
 function dailyMaintenance(render=true){
   const newToday=todayKey();
@@ -520,9 +554,10 @@ function dailyMaintenance(render=true){
   }
 
   const carried=carryForwardUnfinishedTasks();
+  const weeklyCarried=carryForwardWeeklyGoals(monOf(newToday));
   const rec=generateRecurringTasks();
-  if(carried||rec)dosave2();
-  if(render&&(dayChanged||carried||rec))re();
+  if(carried||weeklyCarried||rec)dosave2();
+  if(render&&(dayChanged||carried||weeklyCarried||rec))re();
 }
 
 function showApp(){
@@ -712,10 +747,28 @@ function drC(){
 function openMenu(id){
   if(menuSt===id){menuSt=null;re();return;}
   menuSt=id;re();
+  setTimeout(positionActiveMenu,0);
   setTimeout(()=>{
     function h(e){const m=document.querySelector('.cmenu');if(m&&!m.contains(e.target)){menuSt=null;re();document.removeEventListener('click',h);}}
     document.addEventListener('click',h);
   },50);
+}
+function positionActiveMenu(){
+  const m=document.querySelector('.cmenu');if(!m)return;
+  const anchor=m.previousElementSibling;
+  if(!anchor)return;
+  const gap=8,pad=16,ar=anchor.getBoundingClientRect();
+  m.style.left='0px';m.style.top='0px';
+  const mw=Math.min(m.offsetWidth,window.innerWidth-pad*2),mh=Math.min(m.offsetHeight,window.innerHeight-pad*2);
+  let left=ar.right-mw;
+  if(left<pad)left=pad;
+  if(left+mw>window.innerWidth-pad)left=window.innerWidth-pad-mw;
+  let top=ar.bottom+gap;
+  if(top+mh>window.innerHeight-pad&&ar.top-mh-gap>=pad)top=ar.top-mh-gap;
+  if(top+mh>window.innerHeight-pad)top=window.innerHeight-pad-mh;
+  if(top<pad)top=pad;
+  m.style.left=left+'px';
+  m.style.top=top+'px';
 }
 function findTaskDate(id,preferredCtx){
   if(preferredCtx && D.tasks && Array.isArray(D.tasks[preferredCtx]) && D.tasks[preferredCtx].some(t=>t&&t.id===id))return preferredCtx;
@@ -730,6 +783,12 @@ function findTask(ctx,id){
   const realCtx=findTaskDate(id,ctx);
   const task=realCtx?tf(realCtx).find(t=>t&&t.id===id):null;
   return {ctx:realCtx,task};
+}
+function findItem(kind,ctx,id){
+  if(kind==='task'){const r=findTask(ctx,id);return {ctx:r.ctx,item:r.task};}
+  if(kind==='wg')return {ctx,item:wgf(ctx).find(g=>g&&g.id===id)};
+  if(kind==='mg')return {ctx,item:gf(ctx).find(g=>g&&g.id===id)};
+  return {ctx,item:null};
 }
 function chPrio(ctx,id,p,kind){
   if(kind==='task'){
@@ -818,6 +877,47 @@ function mvTask(id,from,to){
 function mvWG(id,fw,tw){
   const arr=wgf(fw);const fi=arr.findIndex(g=>g.id===id);if(fi<0)return;
   const[g]=arr.splice(fi,1);wgf(tw).push(g);dosave2();re();
+}
+function nextMonthKey(m){const[y,mo]=m.split('-').map(Number),d=new Date(y,mo,1);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;}
+function mvMG(id,fm,tm){
+  const arr=gf(fm);const fi=arr.findIndex(g=>g.id===id);if(fi<0)return;
+  const[g]=arr.splice(fi,1);gf(tm).push(g);dosave2();S.mv=tm;re();
+}
+function moveTaskTomorrow(ctx,id){mvTask(id,ctx,ad(ctx,1));}
+function noteIndicatorHTML(item,ctx,kind){
+  return item.note?`<button class="note-indicator" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()" title="Has note" aria-label="Has note">${ic('notes',13)}</button>`:'';
+}
+function openNoteEditor(kind,ctx,id){
+  const r=findItem(kind,ctx,id),item=r.item;if(!item)return;
+  menuSt=null;
+  re();
+  document.getElementById('_noteBox')?.remove();
+  const box=document.createElement('div');box.id='_noteBox';box.className='add-backdrop';
+  box.innerHTML=`<div class="add-modal note-editor" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:4px">
+      <div style="font-size:18px;font-weight:800;color:var(--pt)">Item note</div>
+      <button class="bact" onclick="closeNoteEditor()" style="opacity:1">${ic('x',16)}</button>
+    </div>
+    <textarea id="itemNoteInput" placeholder="Add a hidden note...">${ec(item.note||'')}</textarea>
+    <div style="display:flex;gap:8px">
+      ${item.note?`<button class="sbtn" onclick="removeItemNote('${kind}','${r.ctx}','${id}')" style="flex:1;color:var(--dan);border-color:var(--dan)">Remove</button>`:''}
+      <button class="sbtn" onclick="closeNoteEditor()" style="flex:1">Cancel</button>
+      <button class="pbtn" onclick="saveItemNote('${kind}','${r.ctx}','${id}')" style="flex:1">Save</button>
+    </div>
+  </div>`;
+  box.onclick=closeNoteEditor;document.body.appendChild(box);setTimeout(()=>document.getElementById('itemNoteInput')?.focus(),30);
+}
+function closeNoteEditor(){document.getElementById('_noteBox')?.remove();}
+function saveItemNote(kind,ctx,id){
+  const r=findItem(kind,ctx,id),item=r.item;if(!item)return;
+  const note=(document.getElementById('itemNoteInput')?.value||'').trim();
+  if(note)item.note=note;else delete item.note;
+  menuSt=null;
+  closeNoteEditor();dosave2();re();
+}
+function removeItemNote(kind,ctx,id){
+  const r=findItem(kind,ctx,id),item=r.item;if(!item)return;
+  delete item.note;menuSt=null;closeNoteEditor();dosave2();re();
 }
 
 
@@ -934,13 +1034,32 @@ function renderMoreMenu(){
   const m=document.getElementById('moreMenu'); if(!m)return;
   const hide=D.ui&&D.ui.hideDone;
   m.innerHTML=`
-    <button class="cmi" onclick="toggleHideDone();closeMoreMenu()">${hide?'Show':'Hide'} completed</button>
-    <button class="cmi" onclick="closeMoreMenu();openRepeatModal()">Repeat task…</button>
-    <div class="cmsep"></div>
-    <button class="cmi" onclick="exportData();closeMoreMenu()">Export backup</button>
-    <button class="cmi" onclick="importData();closeMoreMenu()">Import backup</button>
-  `;
+	    <button class="cmi" onclick="toggleHideDone();closeMoreMenu()">${hide?'Show':'Hide'} completed</button>
+	    <button class="cmi" onclick="closeMoreMenu();openRepeatModal()">Repeat task…</button>
+	    <div class="cmsep"></div>
+	    <button class="cmi" onclick="closeMoreMenu();openStorageModeModal()">Storage mode</button>
+	    <div class="cmsep"></div>
+	    <button class="cmi" onclick="exportData();closeMoreMenu()">Export backup</button>
+	    <button class="cmi" onclick="importData();closeMoreMenu()">Import backup</button>
+	  `;
 }
+function openStorageModeModal(){
+  let box=document.getElementById('_storageBox'); if(box){box.remove();return;}
+  box=document.createElement('div');box.id='_storageBox';box.className='add-backdrop';
+  box.innerHTML=`<div class="add-modal" onclick="event.stopPropagation()">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
+      <div style="font-size:18px;font-weight:800;color:var(--pt)">Storage mode</div>
+      <button class="bact" onclick="closeStorageModeModal()" style="opacity:1">${ic('x',16)}</button>
+    </div>
+    <div style="display:grid;gap:8px">
+      <button class="cmi" style="background:var(--inf-bg);color:var(--inf);cursor:default">${ic('check',14)} Local device / Local file</button>
+      <button class="cmi" disabled style="opacity:.45;cursor:not-allowed">${ic('upload',14)} Sign in with email</button>
+    </div>
+    <div class="small-muted" style="padding:10px 2px 0">Email sign-in requires a backend sync setup.</div>
+  </div>`;
+  box.onclick=closeStorageModeModal;document.body.appendChild(box);
+}
+function closeStorageModeModal(){document.getElementById('_storageBox')?.remove();}
 let addTarget='daily';
 let addPickedDate=TD;
 function openAddModal(target='daily'){
@@ -985,13 +1104,17 @@ function carriedSectionHTML(dt,tasks){
 
 function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
-  const prioOpts=['high','med','low'].map(p=>`<button class="popt ptag ${p}" onclick="chPrio('${ctx}','${item.id}','${p}','${kind}')" style="${(prio||item.priority)===p?`outline:2px solid ${PC[p]};font-weight:700`:''}">${PL[p]}</button>`).join('');
-  const wgMove=kind==='wg'?`<button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,-7)}');menuSt=null;event.stopPropagation()">${ic('arrow-left',14,'color:var(--tt)')} Prev week</button><button class="cmi" onclick="mvWG('${item.id}','${ctx}','${ad(ctx,7)}');menuSt=null;event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Next week</button>`:'';
-  const editBtn=kind==='task'?'':`<button class="cmi" onclick="startEdit('${item.id}','${ctx}','${kind}');event.stopPropagation()">${ic('pencil',14,'color:var(--tt)')} Edit</button>`;
-  const prioSection=(kind==='task')?`<div style="padding:4px 10px 2px;font-size:11px;font-weight:500;color:var(--tt)">Priority</div><div class="priorow">${prioOpts}</div>`:'';
+  const noteBtn=`<button class="cmi" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('notes',14,'color:var(--tt)')} ${item.note?'Edit note':'Add note'}</button>`;
+  const rmNoteBtn=item.note?`<button class="cmi danger" onclick="removeItemNote('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('x',14)} Remove note</button>`:'';
+  const moveBtn=kind==='task'
+    ?`<button class="cmi" onclick="menuSt=null;moveTaskTomorrow('${ctx}','${item.id}');event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Move to tomorrow</button>`
+    :kind==='wg'
+      ?`<button class="cmi" onclick="menuSt=null;mvWG('${item.id}','${ctx}','${ad(ctx,7)}');event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Move to next week</button>`
+      :`<button class="cmi" onclick="menuSt=null;mvMG('${item.id}','${ctx}','${nextMonthKey(ctx)}');event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Move to next month</button>`;
+  const movePanelBtn=kind==='task'?`<button class="cmi" onclick="movePn={kind:'task',id:'${item.id}',from:'${ctx}',wo:0};menuSt=null;re();event.stopPropagation()">${ic('calendar',14,'color:var(--tt)')} Move to day…</button>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
-    ${editBtn}${wgMove}${prioSection}
+    ${noteBtn}${rmNoteBtn}<div class="cmsep"></div>${moveBtn}${movePanelBtn}
   </div>`;
 }
 
@@ -1006,9 +1129,9 @@ function tBlock(t,prio,ctx){
       <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${sourceCtx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
       ${isEdit
         ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${sourceCtx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${sourceCtx}','task')">`
-        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)}</span>`}
+        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)} ${noteIndicatorHTML(t,sourceCtx,'task')}</span>`}
       ${carriedHTML(t)}
-      <div class="row-actions"><button class="bact" onclick="movePn={kind:'task',id:'${t.id}',from:'${sourceCtx}',wo:0};re();event.stopPropagation()" title="Move">${ic('calendar',14)}</button><button class="bact" onclick="delItem('task','${sourceCtx}','${t.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(t,sourceCtx,'task',prio)}</div>
+      <div class="row-actions"><button class="bact delete-action" onclick="delItem('task','${sourceCtx}','${t.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(t,sourceCtx,'task',prio)}</div>
     </div>
     ${isMove?movePH(t.id,sourceCtx):''}
   </div>`;
@@ -1022,8 +1145,8 @@ function gBlock(g,prio,ctx,kind){
     ${prio&&kind!=='wg'?`<span class="ptag ${prio}" style="font-size:11px;${g.done?'opacity:.4':''}">${PL[prio]}</span>`:''}
     ${isEdit
       ?`<input id="ei-${g.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(g.text)}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="editKey(event,'${g.id}','${ctx}','${kind}')">`
-      :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)}</span>`}
-    <div class="gacts">${cMenuHTML(g,ctx,kind,prio)}</div>
+      :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)} ${noteIndicatorHTML(g,ctx,kind)}</span>`}
+    <div class="gacts"><button class="bact delete-action" onclick="delItem('${kind}','${ctx}','${g.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(g,ctx,kind,prio)}</div>
   </div>`;
 }
 
@@ -1101,6 +1224,8 @@ function rd(){
 
 function rw(){
   const m=monOf(S.d),dates=Array.from({length:7},(_,i)=>ad(m,i)),wk=m;
+  const weeklyCarried=carryForwardWeeklyGoals(wk);
+  if(weeklyCarried)dosave2();
   const note=D.wn[wk]||'',goals=wgf(wk);
   let wD=0,wT=0;
   const cols=dates.map((dt,i)=>{
@@ -1244,7 +1369,9 @@ function mergePlannerData(imported){
       && !!a.focus===!!b.focus
       && String(a.carriedFrom||'')===String(b.carriedFrom||'')
       && String(a.repeat||'')===String(b.repeat||'')
-      && String(a.repeatId||'')===String(b.repeatId||'');
+      && String(a.repeatId||'')===String(b.repeatId||'')
+      && String(a.sourceId||'')===String(b.sourceId||'')
+      && String(a.note||'')===String(b.note||'');
   }
   function mergeItemMap(section){
     Object.keys(incoming[section]||{}).forEach(key=>{
