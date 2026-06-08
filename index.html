@@ -397,6 +397,8 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
   .add-inline{min-height:44px}
   .block input[type=checkbox],.goalbk input[type=checkbox]{width:20px!important;height:20px!important}
   .starbtn{width:32px;height:32px;font-size:18px}
+  .block .starbtn:not(.on){display:none!important}
+  .block .starbtn.on{width:28px;height:28px;font-size:16px}
   .bact{min-width:32px;min-height:32px;justify-content:center;padding:4px}
   .bact svg{width:18px;height:18px}
   .row-actions,.gacts{gap:1px}
@@ -931,6 +933,9 @@ function moveTaskTomorrow(ctx,id){mvTask(id,ctx,ad(ctx,1));}
 function noteIndicatorHTML(item,ctx,kind){
   return item.note?`<button class="note-indicator" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()" title="Has note" aria-label="Has note">${ic('notes',13)}</button>`:'';
 }
+function isMobileUI(){
+  return window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
+}
 function weeklyGoalCarriedHTML(g){
   return (g.carriedFrom||g.sourceId)?`<span class="carried-pill" onclick="event.stopPropagation()" style="cursor:default">Carried</span>`:'';
 }
@@ -1148,6 +1153,7 @@ function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
   const noteBtn=`<button class="cmi" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('notes',14,'color:var(--tt)')} ${item.note?'Edit note':'Add note'}</button>`;
   const rmNoteBtn=item.note?`<button class="cmi danger" onclick="removeItemNote('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('x',14)} Remove note</button>`:'';
+  const focusBtn=kind==='task'&&isMobileUI()?`<button class="cmi" onclick="toggleFocus('${ctx}','${item.id}');event.stopPropagation()">${ic('target',14,'color:var(--tt)')} ${item.focus?'Remove from Daily Focus':'Add to Daily Focus'}</button>`:'';
   const moveBtn=kind==='task'
     ?`<button class="cmi" onclick="menuSt=null;moveTaskTomorrow('${ctx}','${item.id}');event.stopPropagation()">${ic('arrow-right',14,'color:var(--tt)')} Move to tomorrow</button>`
     :kind==='wg'
@@ -1156,7 +1162,7 @@ function cMenuHTML(item,ctx,kind,prio){
   const movePanelBtn=kind==='task'?`<button class="cmi" onclick="movePn={kind:'task',id:'${item.id}',from:'${ctx}',wo:0};menuSt=null;re();event.stopPropagation()">${ic('calendar',14,'color:var(--tt)')} Move to day…</button>`:'';
   return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" style="background:var(--bg3)">${ic('dots',14)}</button>
   <div class="cmenu" onclick="event.stopPropagation()">
-    ${noteBtn}${rmNoteBtn}<div class="cmsep"></div>${moveBtn}${movePanelBtn}
+    ${noteBtn}${rmNoteBtn}${focusBtn}<div class="cmsep"></div>${moveBtn}${movePanelBtn}
   </div>`;
 }
 
