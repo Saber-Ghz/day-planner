@@ -887,6 +887,9 @@ function moveTaskTomorrow(ctx,id){mvTask(id,ctx,ad(ctx,1));}
 function noteIndicatorHTML(item,ctx,kind){
   return item.note?`<button class="note-indicator" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()" title="Has note" aria-label="Has note">${ic('notes',13)}</button>`:'';
 }
+function weeklyGoalCarriedHTML(g){
+  return (g.carriedFrom||g.sourceId)?`<span class="carried-pill" onclick="event.stopPropagation()" style="cursor:default">Carried</span>`:'';
+}
 function openNoteEditor(kind,ctx,id){
   const r=findItem(kind,ctx,id),item=r.item;if(!item)return;
   menuSt=null;
@@ -938,8 +941,11 @@ function focusHTML(dt){
   if(!items.length)return'';
   return `<div class="focus-card"><div class="sh" style="margin:0 0 6px 0;color:var(--inf)">${ic('target',13)}&thinsp;Daily focus</div>${items.map(t=>`<div class="focus-row"><input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${dt}','${t.id}')"><span class="btxt" onclick="startEdit('${t.id}','${dt}','task')">${ec(t.text)}</span><button class="bact" onclick="toggleFocus('${dt}','${t.id}')" title="Remove from focus">${ic('x',13)}</button></div>`).join('')}</div>`;
 }
+function fromBadgeHTML(t){
+  return t.carriedFrom?`<span class="carried-pill" onclick="event.stopPropagation()" style="margin-left:4px;vertical-align:1px">From ${dayShort(t.carriedFrom)}</span>`:'';
+}
 function carriedHTML(t){
-  const a=[]; if(t.focus&&!t.done)a.push(`<span class="focus-pill">Focus</span>`); if(t.carriedFrom)a.push(`<span class="carried-pill">From ${dayShort(t.carriedFrom)}</span>`); if(t.repeat)a.push(`<span class="repeat-pill">${ec(t.repeat)}</span>`); return a.join('');
+  const a=[]; if(t.focus&&!t.done)a.push(`<span class="focus-pill">Focus</span>`); if(t.repeat)a.push(`<span class="repeat-pill">${ec(t.repeat)}</span>`); return a.join('');
 }
 function shouldCreateRecurring(r,today){
   if(!r||!r.text)return false; if(r.last===today)return false;
@@ -1094,14 +1100,6 @@ function modalAdd(priority='med'){
   tf(date).push({id:nid(),text,priority,done:false});
   if(el)el.value=''; closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
 }
-function carriedSectionHTML(dt,tasks){
-  // Daily Focus is a filtered view. Focused tasks stay in the same data position,
-  // but they are hidden from Carried/priority lists while focus is on.
-  const carried=tasks.filter(t=>t.carriedFrom&&!t.done&&!t.focus);
-  if(!carried.length)return'';
-  return `<div class="carried-card"><div class="sh">${ic('arrow-right',13)}&thinsp;Carried from previous days</div><div class="dzone">${carried.map(t=>tBlock(t,t.priority||'med',dt)).join('')}</div></div>`;
-}
-
 function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
   const noteBtn=`<button class="cmi" onclick="openNoteEditor('${kind}','${ctx}','${item.id}');event.stopPropagation()">${ic('notes',14,'color:var(--tt)')} ${item.note?'Edit note':'Add note'}</button>`;
@@ -1129,7 +1127,7 @@ function tBlock(t,prio,ctx){
       <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${sourceCtx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
       ${isEdit
         ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${sourceCtx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${sourceCtx}','task')">`
-        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)} ${noteIndicatorHTML(t,sourceCtx,'task')}</span>`}
+        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)} ${noteIndicatorHTML(t,sourceCtx,'task')}${fromBadgeHTML(t)}</span>`}
       ${carriedHTML(t)}
       <div class="row-actions"><button class="bact delete-action" onclick="delItem('task','${sourceCtx}','${t.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(t,sourceCtx,'task',prio)}</div>
     </div>
@@ -1145,7 +1143,7 @@ function gBlock(g,prio,ctx,kind){
     ${prio&&kind!=='wg'?`<span class="ptag ${prio}" style="font-size:11px;${g.done?'opacity:.4':''}">${PL[prio]}</span>`:''}
     ${isEdit
       ?`<input id="ei-${g.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(g.text)}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="editKey(event,'${g.id}','${ctx}','${kind}')">`
-      :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)} ${noteIndicatorHTML(g,ctx,kind)}</span>`}
+      :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)} ${noteIndicatorHTML(g,ctx,kind)}${kind==='wg'?weeklyGoalCarriedHTML(g):''}</span>`}
     <div class="gacts"><button class="bact delete-action" onclick="delItem('${kind}','${ctx}','${g.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(g,ctx,kind,prio)}</div>
   </div>`;
 }
@@ -1155,18 +1153,17 @@ function rd(){
   const done=allDayTasks.filter(t=>t.done).length,total=allDayTasks.length;
   const note=D.dn[dt]||'',isT=dt===TD;
   const pct=total>0?Math.round(done/total*100):0,allDone=total>0&&done===total;
-  const carriedOpen=visibleTasks.filter(t=>t.carriedFrom&&!t.done&&!t.focus);
   const doneTasks=(D.ui&&D.ui.hideDone)?[]:allDayTasks.filter(t=>t.done);
   // Hide focused tasks from normal priority sections to avoid duplicate display.
   // Turning focus off makes them appear back here in their original array order.
-  const regularTasks=visibleTasks.filter(t=>!t.done && !t.focus && !(t.carriedFrom&&!t.done));
+  const regularTasks=visibleTasks.filter(t=>!t.done && !t.focus);
 
   const secs=['high','med','low'].map(p=>{
     const pts=regularTasks.filter(t=>t.priority===p);
     if(!pts.length)return'';
     const colKey='col-d-'+p;
     const isCol=!!collapsed[colKey];
-    const label={high:'High priority',med:'Medium priority',low:'Low / someday'}[p];
+    const label={high:'High priority',med:'Medium priority',low:'Low priority'}[p];
     const badge=isCol&&pts.length?`<span style="font-size:10px;font-weight:600;color:var(--st);background:var(--bg3);padding:1px 7px;border-radius:10px;margin-left:4px">${pts.length}</span>`:'';
     const chevron=`<span class="col-chevron" style="transform:rotate(${isCol?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>`;
     return`<div class="sec-wrap" style="margin-bottom:2px">
@@ -1212,7 +1209,6 @@ function rd(){
     </div>
     <div class="prog" style="margin-top:16px"><div class="progf" style="width:${pct}%;${allDone&&total>0?'background:var(--suc)':''}"></div></div>
     ${focusHTML(dt)}
-    ${carriedSectionHTML(dt,visibleTasks)}
     ${secs}
     ${doneSection}
     ${emptyHTML}
