@@ -509,7 +509,7 @@ let uid=0;const nid=()=>`${Date.now()}${++uid}`;
 const tf=d=>D.tasks[d]||(D.tasks[d]=[]);
 const gf=m=>D.mg[m]||(D.mg[m]=[]);
 const wgf=w=>D.wg[w]||(D.wg[w]=[]);
-function normalizeData(d){d.tasks=d.tasks||{};d.dn=d.dn||{};d.wn=d.wn||{};d.wg=d.wg||{};d.mg=d.mg||{};d.mn=d.mn||{};d.ui=d.ui||{};d.recurring=Array.isArray(d.recurring)?d.recurring:[];d.review=d.review||{};return d;}
+function normalizeData(d){d.tasks=d.tasks||{};d.dn=d.dn||{};d.wn=d.wn||{};d.wg=d.wg||{};d.mg=d.mg||{};d.mn=d.mn||{};d.ui=d.ui||{};d.recurring=Array.isArray(d.recurring)?d.recurring:[];d.review=d.review||{};d.updatedAt=d.updatedAt||'';return d;}
 function dayShort(s){const d=pd(s);return `${MNS[d.getMonth()]} ${d.getDate()}`;}
 function allTasks(){return Object.keys(D.tasks||{}).flatMap(dt=>(D.tasks[dt]||[]).map(t=>({...t,date:dt})));}
 let svt=null;
@@ -517,6 +517,10 @@ let editSt=null,menuSt=null,movePn=null,addSt=null;
 let collapsed={}; // section collapse state, keyed by priority+context
 let undoStack=[];
 let lastDJson='';
+const GOOGLE_CLIENT_ID = "PASTE_CLIENT_ID_HERE";
+const DRIVE_FILE_NAME='planner-data.json';
+const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
+let driveToken='',driveFileId='',driveSyncStatus='local',driveSyncMessage='Local only',driveSaveTimer=null,driveApplying=false,driveTokenClient=null;
 
 function updateUndoBtn(){
   const b=document.getElementById('undoBtn');
@@ -527,20 +531,157 @@ function undoLast(){
   if(!prev){updateUndoBtn();return;}
   try{D=normalizeData(JSON.parse(prev));}
   catch(e){updateUndoBtn();return;}
+  touchLocalUpdatedAt();
   lastDJson=JSON.stringify(D);
   try{if(window.storage)window.storage.set('pl3',lastDJson);}catch(e){}
   try{localStorage.setItem('pl3',lastDJson);}catch(e){}
+  scheduleDriveSave();
   updateUndoBtn();re();showToast('Undone');
 }
 
 function dosave2(){
+  touchLocalUpdatedAt();
   const j=JSON.stringify(D);
   if(lastDJson && j!==lastDJson){undoStack.push(lastDJson);if(undoStack.length>25)undoStack.shift();}
   lastDJson=j;updateUndoBtn();
   try{if(window.storage)window.storage.set('pl3',j);}catch(e){}
   try{localStorage.setItem('pl3',j);}catch(e){}
+  scheduleDriveSave();
   const el=document.getElementById('svind');
   if(el){el.style.opacity='1';clearTimeout(svt);svt=setTimeout(()=>el.style.opacity='0',2000);}
+}
+
+function touchLocalUpdatedAt(){
+  if(driveApplying)return D.updatedAt||getLocalUpdatedAt();
+  const ts=new Date().toISOString();
+  D.updatedAt=ts;
+  try{localStorage.setItem('pl3_updatedAt',ts);}catch(e){}
+  return ts;
+}
+function getLocalUpdatedAt(){
+  try{return D.updatedAt||localStorage.getItem('pl3_updatedAt')||'';}catch(e){return D.updatedAt||'';}
+}
+function isGoogleDriveConfigured(){
+  return !!GOOGLE_CLIENT_ID&&GOOGLE_CLIENT_ID!=='PASTE_CLIENT_ID_HERE';
+}
+function plannerComparableJson(data){
+  const copy=normalizeData({...data});
+  delete copy.updatedAt;
+  return JSON.stringify(copy);
+}
+function setDriveStatus(status,msg){
+  driveSyncStatus=status;
+  driveSyncMessage=msg||({local:'Local only',connecting:'Connecting',synced:'Synced',failed:'Sync failed'}[status]||status);
+  const el=document.getElementById('driveSyncStatus');
+  if(el)el.textContent=driveSyncMessage;
+}
+function driveStatusHTML(){
+  const tone=driveSyncStatus==='synced'?'var(--suc)':driveSyncStatus==='failed'?'var(--dan)':driveSyncStatus==='connecting'?'var(--inf)':'var(--st)';
+  return `<div class="small-muted" style="padding:8px 2px;color:${tone}">Sync: <span id="driveSyncStatus">${ec(driveSyncMessage)}</span></div>`;
+}
+function loadGoogleIdentity(){
+  return new Promise((resolve,reject)=>{
+    if(window.google&&window.google.accounts&&window.google.accounts.oauth2){resolve();return;}
+    const existing=document.querySelector('script[data-google-identity]');
+    if(existing){existing.addEventListener('load',resolve,{once:true});existing.addEventListener('error',reject,{once:true});return;}
+    const s=document.createElement('script');
+    s.src='https://accounts.google.com/gsi/client';s.async=true;s.defer=true;s.dataset.googleIdentity='1';
+    s.onload=resolve;s.onerror=()=>reject(new Error('Google sign-in script failed to load'));
+    document.head.appendChild(s);
+  });
+}
+async function connectDriveSync(){
+  if(!isGoogleDriveConfigured()){
+    setDriveStatus('local','Local only');
+    return;
+  }
+  setDriveStatus('connecting','Connecting');
+  try{
+    await loadGoogleIdentity();
+    driveTokenClient=driveTokenClient||google.accounts.oauth2.initTokenClient({
+      client_id:GOOGLE_CLIENT_ID,
+      scope:DRIVE_SCOPE,
+      callback:async r=>{
+        if(r&&r.access_token){driveToken=r.access_token;await syncFromDriveAfterSignIn();}
+        else setDriveStatus('failed','Sync failed');
+      }
+    });
+    driveTokenClient.requestAccessToken({prompt:driveToken?'':'consent'});
+  }catch(e){setDriveStatus('failed','Sync failed');showToast('Google Drive sync failed');}
+}
+async function driveFetch(url,opts={}){
+  const res=await fetch(url,{...opts,headers:{...(opts.headers||{}),Authorization:`Bearer ${driveToken}`}});
+  if(!res.ok)throw new Error(`Drive request failed ${res.status}`);
+  return res;
+}
+async function findDrivePlannerFile(){
+  const q=encodeURIComponent(`name='${DRIVE_FILE_NAME}' and trashed=false`);
+  const res=await driveFetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,modifiedTime)&orderBy=modifiedTime desc`);
+  const files=(await res.json()).files||[];
+  files.sort((a,b)=>String(b.modifiedTime||'').localeCompare(String(a.modifiedTime||'')));
+  await Promise.all(files.slice(1).map(f=>driveFetch(`https://www.googleapis.com/drive/v3/files/${f.id}`,{
+    method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({trashed:true})
+  }).catch(()=>null)));
+  driveFileId=files[0]?.id||driveFileId||'';
+  return files[0]||null;
+}
+function normalizeDrivePayload(payload,file){
+  if(payload&&payload.data)return {data:normalizeData(payload.data),updatedAt:payload.updatedAt||payload.data.updatedAt||file?.modifiedTime||''};
+  return {data:normalizeData(payload||{}),updatedAt:payload?.updatedAt||file?.modifiedTime||''};
+}
+async function downloadDriveData(file){
+  const res=await driveFetch(`https://www.googleapis.com/drive/v3/files/${file.id}?alt=media`);
+  return normalizeDrivePayload(await res.json(),file);
+}
+async function uploadDriveData(){
+  if(!driveToken)return;
+  setDriveStatus('connecting','Connecting');
+  const updatedAt=getLocalUpdatedAt()||touchLocalUpdatedAt()||new Date().toISOString();
+  const payload=JSON.stringify(normalizeData({...D,updatedAt}),null,2);
+  try{lastDJson=JSON.stringify(D);localStorage.setItem('pl3',lastDJson);if(window.storage)window.storage.set('pl3',lastDJson);}catch(e){}
+  const boundary='planner_'+Date.now();
+  const exists=driveFileId||((await findDrivePlannerFile())?.id);
+  const metadata={name:DRIVE_FILE_NAME,mimeType:'application/json'};
+  const body=`--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(metadata)}\r\n--${boundary}\r\nContent-Type: application/json\r\n\r\n${payload}\r\n--${boundary}--`;
+  const url=exists
+    ?`https://www.googleapis.com/upload/drive/v3/files/${exists}?uploadType=multipart&fields=id,modifiedTime`
+    :'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,modifiedTime';
+  const res=await driveFetch(url,{method:exists?'PATCH':'POST',headers:{'Content-Type':`multipart/related; boundary=${boundary}`},body});
+  const meta=await res.json();
+  driveFileId=meta.id||exists||'';
+  setDriveStatus('synced','Synced');
+}
+async function syncFromDriveAfterSignIn(){
+  try{
+    const file=await findDrivePlannerFile();
+    if(!file){await uploadDriveData();showToast('Google Drive sync enabled');return;}
+    const remote=await downloadDriveData(file);
+    const remoteTime=Date.parse(remote.updatedAt||file.modifiedTime||'')||0;
+    const localTime=Date.parse(getLocalUpdatedAt()||'')||0;
+    const remoteData=normalizeData({tasks:{},dn:{},wn:{},wg:{},mg:{},mn:{},ui:{},recurring:[],review:{},...remote.data,updatedAt:remote.updatedAt||remote.data.updatedAt||file.modifiedTime||''});
+    const remoteComparable=plannerComparableJson(remoteData);
+    const localComparable=plannerComparableJson(D);
+    if(remoteComparable!==localComparable&&remoteTime>localTime){
+      if(confirm('Google Drive has newer planner data. Replace local data with Drive data?')){
+        driveApplying=true;
+        D=normalizeData(remoteData);
+        lastDJson=JSON.stringify(D);
+        try{if(window.storage)window.storage.set('pl3',lastDJson);}catch(e){}
+        try{localStorage.setItem('pl3',lastDJson);localStorage.setItem('pl3_updatedAt',remoteData.updatedAt||file.modifiedTime||new Date().toISOString());}catch(e){}
+        driveApplying=false;
+        updateUndoBtn();re();setDriveStatus('synced','Synced');showToast('Loaded from Google Drive');return;
+      }
+      setDriveStatus('local','Local only — Drive has newer data');return;
+    }
+    if(remoteComparable!==localComparable&&localTime>=remoteTime)await uploadDriveData();
+    else setDriveStatus('synced','Synced');
+    showToast('Google Drive sync enabled');
+  }catch(e){driveApplying=false;setDriveStatus('failed','Sync failed');showToast('Google Drive sync failed');}
+}
+function scheduleDriveSave(){
+  if(driveApplying||!driveToken)return;
+  clearTimeout(driveSaveTimer);
+  driveSaveTimer=setTimeout(()=>uploadDriveData().catch(()=>setDriveStatus('failed','Sync failed')),1500);
 }
 
 function carryForwardUnfinishedTasks(){
@@ -1106,6 +1247,15 @@ function renderMoreMenu(){
 }
 function openStorageModeModal(){
   let box=document.getElementById('_storageBox'); if(box){box.remove();return;}
+  const driveAction=!isGoogleDriveConfigured()
+    ?`<div class="cmi" style="opacity:.55;cursor:not-allowed;background:var(--bg3)">
+        ${ic('upload',14)}
+        <span style="flex:1">Google Drive sync</span>
+        <span style="font-size:10px;font-weight:800;color:var(--st);background:var(--bg2);border-radius:999px;padding:2px 7px">Not configured</span>
+      </div>`
+    :driveToken
+      ?`<button class="cmi" onclick="syncFromDriveAfterSignIn()">${ic('upload',14)} Sync now</button>`
+      :`<button class="cmi" onclick="connectDriveSync()">${ic('upload',14)} Connect Google Drive</button>`;
   box=document.createElement('div');box.id='_storageBox';box.className='add-backdrop';
   box.innerHTML=`<div class="add-modal" onclick="event.stopPropagation()">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px">
@@ -1113,10 +1263,19 @@ function openStorageModeModal(){
       <button class="bact" onclick="closeStorageModeModal()" style="opacity:1">${ic('x',16)}</button>
     </div>
     <div style="display:grid;gap:8px">
-      <button class="cmi" style="background:var(--inf-bg);color:var(--inf);cursor:default">${ic('check',14)} Local device / Local file</button>
-      <button class="cmi" disabled style="opacity:.45;cursor:not-allowed">${ic('upload',14)} Sign in with email</button>
+      <button class="cmi" style="background:var(--inf-bg);color:var(--inf);cursor:default;align-items:flex-start">
+        ${ic('check',14)}
+        <span style="flex:1">Local device <span class="small-muted" style="display:block;padding-top:3px;color:var(--inf)">Saves only on this device.</span></span>
+      </button>
+      ${driveAction}
+      <div class="cmi" style="opacity:.55;cursor:not-allowed;background:var(--bg3)">
+        ${ic('upload',14)}
+        <span style="flex:1">Email sign-in</span>
+        <span style="font-size:10px;font-weight:800;color:var(--st);background:var(--bg2);border-radius:999px;padding:2px 7px">Later</span>
+      </div>
     </div>
-    <div class="small-muted" style="padding:10px 2px 0">Email sign-in requires a backend sync setup.</div>
+    ${driveStatusHTML()}
+    <div class="small-muted" style="padding:0 2px">Use Export backup to move data manually.</div>
   </div>`;
   box.onclick=closeStorageModeModal;document.body.appendChild(box);
 }
