@@ -371,23 +371,33 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 }
 
 @media(max-width:600px){
-  html,body{width:100%;min-width:0;overflow-x:hidden;font-size:16px}
-  [style*="padding:1.25rem 0 2.5rem"]{width:100%;min-width:0}
+  html,body{width:100%;min-width:0;overflow-x:hidden;font-size:15px}
+  [style*="padding:1.25rem 0 2.5rem"]{width:100%;min-width:0;padding-top:12px!important;padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
   [style*="max-width:640px"]{max-width:none!important;width:100%!important;padding-left:12px!important;padding-right:12px!important}
   #pa,#vd,#vw,#vm{width:100%;max-width:none}
-  .planner-top{align-items:stretch!important;gap:10px!important}
-  .planner-actions{flex-wrap:wrap!important;justify-content:flex-end!important}
+  .planner-top{align-items:stretch!important;gap:8px!important;margin-bottom:10px!important;padding-top:4px;padding-bottom:8px}
+  .planner-actions{flex-wrap:wrap!important;justify-content:center!important;gap:5px!important}
   .tabs{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-  .tab{justify-content:center;font-size:14px;min-height:36px;padding:7px 8px}
-  .topbtn.icon-only,.search-btn{width:40px;height:40px}
-  .block,.goalbk{min-height:48px;padding:11px 12px;gap:7px}
+  .tab{justify-content:center;font-size:13px;min-height:32px;padding:5px 7px}
+  .topbtn.icon-only,.search-btn{width:36px;height:36px}
+  .topbtn{min-height:36px}
+  .ph{font-size:24px}
+  .pmeta{font-size:12px;margin-top:2px}
+  .prog{margin:10px 0 14px!important}
+  .sh{margin-top:16px}
+  .block,.goalbk{min-height:44px;padding:9px 11px;gap:7px}
   .btxt,.binp{font-size:16px}
-  .block input[type=checkbox],.goalbk input[type=checkbox]{width:22px;height:22px}
-  .bact{min-width:34px;min-height:34px;justify-content:center}
+  .block input[type=checkbox],.goalbk input[type=checkbox]{width:20px;height:20px}
+  .starbtn{width:28px;height:28px;font-size:17px}
+  .bact{min-width:32px;min-height:32px;justify-content:center;padding:4px}
   .row-actions,.gacts{gap:1px}
   .quickbar{width:100%;gap:6px;padding:10px}
   .quickbar input{font-size:16px}
-  .fab{right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px}
+  .wcols{display:grid;grid-auto-flow:column;grid-auto-columns:104px;grid-template-columns:none;gap:8px;overflow-x:auto;overscroll-behavior-x:contain;scroll-snap-type:x proximity;padding-bottom:4px;margin-left:-2px;margin-right:-2px}
+  .bcol{min-height:126px;scroll-snap-align:start}
+  .week-status{white-space:normal}
+  .n-ta{font-size:16px;line-height:1.55;min-height:72px}
+  .fab{right:16px;bottom:calc(16px + env(safe-area-inset-bottom));width:56px;height:56px;font-size:28px}
 }
 </style>
 
