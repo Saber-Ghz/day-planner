@@ -275,12 +275,19 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .starbtn{border:none;background:none;color:var(--tt);cursor:pointer;width:26px;height:26px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:18px;line-height:1;flex-shrink:0;opacity:1;transition:opacity .12s,background .12s,color .12s}
 .starbtn.on{color:var(--inf);background:var(--inf-bg);opacity:1}
 .starbtn:hover{background:var(--bg3);color:var(--inf)}
+.wg-focus-btn{border:none;background:none;color:var(--tt);cursor:pointer;width:24px;height:24px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;font-size:15px;line-height:1;flex-shrink:0;opacity:.45;transition:opacity .12s,background .12s,color .12s}
+.wg-focus-btn.on{color:var(--inf);background:var(--inf-bg);opacity:1}
+.wg-focus-btn:hover{background:var(--bg3);color:var(--inf);opacity:1}
+.wg-focus-text{font-weight:650}
 .row-actions{opacity:0;display:flex;gap:2px;align-items:center;transition:opacity .1s;flex-shrink:0}
 .block:hover .row-actions,.goalbk:hover .row-actions{opacity:1}
 @media(hover:hover){
   .block .starbtn:not(.on){opacity:0}
   .block:hover .starbtn:not(.on),
   .block:focus-within .starbtn:not(.on){opacity:.45}
+  .goalbk .wg-focus-btn:not(.on){opacity:0}
+  .goalbk:hover .wg-focus-btn:not(.on),
+  .goalbk:focus-within .wg-focus-btn:not(.on){opacity:.45}
 }
 .fab{position:fixed;right:28px;bottom:28px;width:58px;height:58px;border:none;border-radius:999px;background:var(--inf);color:white;box-shadow:0 12px 36px rgba(0,122,255,.35);font-size:30px;font-weight:500;cursor:pointer;z-index:700;display:flex;align-items:center;justify-content:center;line-height:1;transition:transform .12s,opacity .12s}
 .fab:hover{transform:translateY(-2px)}
@@ -292,6 +299,14 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
 .add-where{display:flex;gap:6px;margin-bottom:10px;background:var(--bg3);border-radius:14px;padding:3px}
 .add-where button{flex:1;border:none;background:transparent;color:var(--st);font-family:var(--fnt);font-size:12px;font-weight:800;border-radius:11px;padding:8px;cursor:pointer}
 .add-where button.on{background:var(--bg2);color:var(--inf);box-shadow:var(--shadow)}
+.add-date-row{display:flex;align-items:center;gap:6px;margin-top:12px;margin-bottom:14px;background:transparent;border-radius:14px;padding:0;flex-wrap:wrap}
+.add-date-label{font-size:11px;font-weight:600;color:var(--tt);margin-right:2px}
+.add-date-row button{flex:0 0 auto;border:none;background:var(--bg3);color:var(--st);font-family:var(--fnt);font-size:12px;font-weight:600;border-radius:999px;padding:5px 9px;cursor:pointer;display:inline-flex;align-items:center;gap:4px}
+.add-date-row button.on{background:var(--inf-bg);color:var(--inf);font-weight:700}
+.add-suggest{position:absolute;left:0;right:0;top:calc(100% - 6px);background:var(--bg2);border:1px solid var(--bd);border-radius:14px;box-shadow:0 12px 34px rgba(0,0,0,.16);padding:5px;z-index:10000}
+.add-suggest button{display:block;width:100%;border:none;background:transparent;color:var(--pt);font-family:var(--fnt);font-size:14px;text-align:left;padding:9px 10px;border-radius:10px;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.add-suggest button.on,.add-suggest button:hover{background:var(--inf-bg);color:var(--inf)}
+.text-suggest-pop{position:fixed;left:0;top:0;right:auto;display:none;z-index:10001;max-width:calc(100vw - 32px)}
 .empty-day{background:var(--bg2);border-radius:18px;border:1px dashed var(--bd2);padding:22px;text-align:center;color:var(--st);margin:12px 0}
 @media(max-width:700px){.planner-top{position:static}.planner-actions{justify-content:flex-end}.topbtn.clean-label{display:none}.search-btn span{display:none}.search-btn{width:38px;height:38px;padding:0!important;justify-content:center}.fab{right:18px;bottom:18px}.add-backdrop{align-items:flex-end}.add-modal{transform:none}}
 
@@ -416,7 +431,7 @@ html,body{background:var(--bg);color:var(--pt);font-family:var(--fnt);font-size:
   .add-modal{width:calc(100vw - 24px)!important;max-width:calc(100vw - 24px)!important;padding:14px!important;overflow:hidden}
   .add-modal input,.add-modal button{max-width:100%;box-sizing:border-box}
   .add-modal input{width:100%!important}
-  .add-prio-row,.add-where{width:100%;max-width:100%;box-sizing:border-box}
+  .add-prio-row,.add-where,.add-date-row{width:100%;max-width:100%;box-sizing:border-box}
   .add-prio-row{gap:6px}
   .add-prio-row .qbtn{min-width:0;padding-left:6px;padding-right:6px}
 }
@@ -780,6 +795,7 @@ function tryLoad(){
 
 const S={v:'daily',d:TD,mv:mk(TD)};
 function psv(v){
+  closeTextSuggestions();
   S.v=v;menuSt=null;movePn=null;addSt=null;editSt=null;
   document.querySelectorAll('.tab').forEach(b=>b.className='tab'+(b.dataset.v===v?' on':''));
   ['vd','vw','vm'].forEach(id=>document.getElementById(id).style.display='none');
@@ -800,9 +816,9 @@ function inlineAdd(e,type,ctx,p,key){
       else if(type==='mg')gf(ctx).push({id:nid(),text:v,done:false});
       dosave2();
     }
-    addSt=null; setTimeout(re,0);
+    closeTextSuggestions();addSt=null; setTimeout(re,0);
   }
-  if(e.key==='Escape'){e.target.value='';addSt=null;re();}
+  if(e.key==='Escape'){e.target.value='';closeTextSuggestions();addSt=null;re();}
 }
 // Save on blur (click anywhere else) — grab value immediately, re-render after event cycle
 function blurSave(key,type,ctx,p){
@@ -814,6 +830,7 @@ function blurSave(key,type,ctx,p){
     else if(type==='mg')gf(ctx).push({id:nid(),text:v,done:false});
     dosave2();
   }
+  closeTextSuggestions();
   addSt=null;
   setTimeout(re,0);
 }
@@ -822,10 +839,11 @@ function addFH(key,p,type,ctx){
   if(addSt!==key)return`<button class="add-line" onclick="addSt='${key}';re()">${ic('plus',13,'color:var(--tt)')} New ${label}</button>`;
   const fakeCheck=`<span style="width:15px;height:15px;border:1.5px solid var(--bd2);border-radius:3px;flex-shrink:0;display:inline-block"></span>`;
   const prioTag=p?`<span class="ptag ${p}" style="opacity:.6">${PL[p]}</span>`:'';
+  const suggest=type==='wg'||type==='mg'?`oninput="renderTextSuggestions(this,'${type}')" onkeydown="if(textSuggestKey(event,'${type}'))return;inlineAdd(event,'${type}','${ctx}','${p}','${key}')"`:`onkeydown="inlineAdd(event,'${type}','${ctx}','${p}','${key}')"`;
   return`<div class="add-inline">
     <span style="width:18px;flex-shrink:0"></span>
     ${fakeCheck}
-<input id="ai-${key}" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="Type and press Enter…" onkeydown="inlineAdd(event,'${type}','${ctx}','${p}','${key}')" onblur="blurSave('${key}','${type}','${ctx}','${p}')">
+<input id="ai-${key}" spellcheck="true" autocapitalize="sentences" autocomplete="off" placeholder="Type and press Enter…" ${suggest} onblur="blurSave('${key}','${type}','${ctx}','${p}')">
 ${prioTag}
   </div>`;
 }
@@ -1000,11 +1018,12 @@ function saveEdit(id,ctx,val,kind){
   if(kind==='task'){const r=findTask(ctx,id);if(r.task&&v)r.task.text=v;}
   else if(kind==='wg'){const g=wgf(ctx).find(g=>g.id===id);if(g&&v)g.text=v;}
   else if(kind==='mg'){const g=gf(ctx).find(g=>g.id===id);if(g&&v)g.text=v;}
+  closeTextSuggestions();
   editSt=null;dosave2();re();
 }
 function editKey(e,id,ctx,kind){
   if(e.key==='Enter'){e.preventDefault();saveEdit(id,ctx,e.target.value,kind);}
-  if(e.key==='Escape'){editSt=null;re();}
+  if(e.key==='Escape'){closeTextSuggestions();editSt=null;re();}
 }
 let justDone=null;
 function togItem(kind,ctx,id){
@@ -1086,6 +1105,9 @@ function isMobileUI(){
 function weeklyGoalCarriedHTML(g){
   return (g.carriedFrom||g.sourceId)?`<span class="carried-pill" onclick="event.stopPropagation()" style="cursor:default">Carried</span>`:'';
 }
+function weeklyFocusButtonHTML(g,ctx){
+  return `<button class="wg-focus-btn${g.focus?' on':''}" onclick="toggleWeeklyFocus('${ctx}','${g.id}');event.stopPropagation()" title="${g.focus?'Remove weekly focus':'Mark weekly focus'}" aria-label="${g.focus?'Remove weekly focus':'Mark weekly focus'}">★</button>`;
+}
 function openNoteEditor(kind,ctx,id){
   const r=findItem(kind,ctx,id),item=r.item;if(!item)return;
   menuSt=null;
@@ -1132,6 +1154,11 @@ function goToday(){S.d=TD;S.mv=mk(TD);addSt=null;editSt=null;menuSt=null;movePn=
 function toggleHideDone(){D.ui.hideDone=!D.ui.hideDone;dosave2();re();}
 function updateHideBtn(){renderMoreMenu();}
 function toggleFocus(ctx,id){const r=findTask(ctx,id); const t=r.task; if(t){t.focus=!t.focus;menuSt=null;dosave2();re();}}
+function toggleWeeklyFocus(ctx,id){
+  const goals=wgf(ctx),g=goals.find(x=>x&&x.id===id); if(!g)return;
+  if(!g.focus&&goals.filter(x=>x&&x.focus).length>=3){showToast('Max 3 weekly focus goals');return;}
+  g.focus=!g.focus;menuSt=null;dosave2();re();
+}
 function focusHTML(dt){
   const items=tf(dt).filter(t=>t.focus&&!t.done);
   if(!items.length)return'';
@@ -1282,8 +1309,109 @@ function openStorageModeModal(){
 function closeStorageModeModal(){document.getElementById('_storageBox')?.remove();}
 let addTarget='daily';
 let addPickedDate=TD;
+let addSuggestItems=[];
+let addSuggestIndex=-1;
+function addSuggestionPool(){
+  const map=new Map();
+  function add(text,stamp,kind){
+    const phrase=String(text||'').trim().replace(/\s+/g,' ');
+    if(!phrase)return;
+    const key=phrase.toLowerCase();
+    const cur=map.get(key)||{text:phrase,count:0,latest:'',kinds:{}};
+    cur.count++;
+    cur.kinds[kind]=(cur.kinds[kind]||0)+1;
+    if(String(stamp||'')>cur.latest)cur.latest=String(stamp||'');
+    map.set(key,cur);
+  }
+  Object.keys(D.tasks||{}).forEach(dt=>(D.tasks[dt]||[]).forEach(t=>add(t&&t.text,dt,'task')));
+  Object.keys(D.wg||{}).forEach(w=>(D.wg[w]||[]).forEach(g=>add(g&&g.text,w,'wg')));
+  Object.keys(D.mg||{}).forEach(m=>(D.mg[m]||[]).forEach(g=>add(g&&g.text,m,'mg')));
+  return [...map.values()];
+}
+function getAddSuggestions(q,preferredKind='task'){
+  q=String(q||'').trim().toLowerCase();
+  if(q.length<2)return[];
+  return addSuggestionPool()
+    .map(x=>({...x,match:x.text.toLowerCase().startsWith(q)?0:x.text.toLowerCase().includes(q)?1:2,ctx:x.kinds[preferredKind]?0:1}))
+    .filter(x=>x.match<2&&x.text.toLowerCase()!==q)
+    .sort((a,b)=>a.match-b.match||a.ctx-b.ctx||b.count-a.count||String(b.latest).localeCompare(String(a.latest))||a.text.length-b.text.length)
+    .slice(0,5);
+}
+function renderAddSuggestions(q){
+  const box=document.getElementById('addSuggest');if(!box)return;
+  addSuggestItems=getAddSuggestions(q,'task');
+  addSuggestIndex=-1;
+  if(!addSuggestItems.length){box.style.display='none';box.innerHTML='';return;}
+  box.innerHTML=addSuggestItems.map((s,i)=>`<button type="button" class="${i===addSuggestIndex?'on':''}" onmousedown="event.preventDefault();acceptAddSuggestion(${i})">${ec(s.text)}</button>`).join('');
+  box.style.display='block';
+}
+function refreshAddSuggestionActive(){
+  document.querySelectorAll('#addSuggest button').forEach((b,i)=>b.classList.toggle('on',i===addSuggestIndex));
+}
+function acceptAddSuggestion(i=addSuggestIndex){
+  const s=addSuggestItems[i];if(!s)return false;
+  const el=document.getElementById('addModalInput');if(el){el.value=s.text;el.focus();}
+  closeAddSuggestions();
+  return true;
+}
+function closeAddSuggestions(){
+  const box=document.getElementById('addSuggest');if(box){box.style.display='none';box.innerHTML='';}
+  addSuggestItems=[];addSuggestIndex=-1;
+}
+function addInputKey(e){
+  if(e.key==='ArrowDown'&&addSuggestItems.length){e.preventDefault();addSuggestIndex=(addSuggestIndex+1)%addSuggestItems.length;refreshAddSuggestionActive();return;}
+  if(e.key==='ArrowUp'&&addSuggestItems.length){e.preventDefault();addSuggestIndex=(addSuggestIndex-1+addSuggestItems.length)%addSuggestItems.length;refreshAddSuggestionActive();return;}
+  if((e.key==='Enter'||e.key==='Tab')&&addSuggestIndex>=0&&acceptAddSuggestion()){e.preventDefault();return;}
+  if(e.key==='Enter'){modalAdd('med');return;}
+  if(e.key==='Escape'){
+    if(addSuggestItems.length){closeAddSuggestions();return;}
+    closeAddModal();
+  }
+}
+let textSuggestItems=[];
+let textSuggestIndex=-1;
+let textSuggestInput=null;
+function ensureTextSuggestBox(){
+  let box=document.getElementById('textSuggest');
+  if(!box){box=document.createElement('div');box.id='textSuggest';box.className='add-suggest text-suggest-pop';document.body.appendChild(box);}
+  return box;
+}
+function positionTextSuggestBox(input,box){
+  const r=input.getBoundingClientRect(),pad=16,w=Math.min(Math.max(r.width,220),window.innerWidth-pad*2);
+  let left=Math.min(Math.max(r.left,pad),window.innerWidth-pad-w),top=r.bottom+6;
+  if(top+box.offsetHeight>window.innerHeight-pad)top=Math.max(pad,r.top-box.offsetHeight-6);
+  Object.assign(box.style,{width:w+'px',left:left+'px',top:top+'px'});
+}
+function renderTextSuggestions(input,preferredKind){
+  const box=ensureTextSuggestBox();
+  textSuggestInput=input;
+  textSuggestItems=getAddSuggestions(input.value,preferredKind);
+  textSuggestIndex=-1;
+  if(!textSuggestItems.length){closeTextSuggestions();return;}
+  box.innerHTML=textSuggestItems.map((s,i)=>`<button type="button" class="${i===textSuggestIndex?'on':''}" onmousedown="event.preventDefault();acceptTextSuggestion(${i})">${ec(s.text)}</button>`).join('');
+  box.style.display='block';
+  positionTextSuggestBox(input,box);
+}
+function refreshTextSuggestionActive(){
+  document.querySelectorAll('#textSuggest button').forEach((b,i)=>b.classList.toggle('on',i===textSuggestIndex));
+}
+function acceptTextSuggestion(i=textSuggestIndex){
+  const s=textSuggestItems[i];if(!s||!textSuggestInput)return false;
+  textSuggestInput.value=s.text;textSuggestInput.focus();closeTextSuggestions();return true;
+}
+function closeTextSuggestions(){
+  const box=document.getElementById('textSuggest');if(box){box.style.display='none';box.innerHTML='';}
+  textSuggestItems=[];textSuggestIndex=-1;textSuggestInput=null;
+}
+function textSuggestKey(e,preferredKind){
+  if(e.key==='ArrowDown'&&textSuggestItems.length){e.preventDefault();textSuggestIndex=(textSuggestIndex+1)%textSuggestItems.length;refreshTextSuggestionActive();return true;}
+  if(e.key==='ArrowUp'&&textSuggestItems.length){e.preventDefault();textSuggestIndex=(textSuggestIndex-1+textSuggestItems.length)%textSuggestItems.length;refreshTextSuggestionActive();return true;}
+  if((e.key==='Enter'||e.key==='Tab')&&textSuggestIndex>=0&&acceptTextSuggestion()){e.preventDefault();return true;}
+  if(e.key==='Escape'&&textSuggestItems.length){e.preventDefault();closeTextSuggestions();return true;}
+  return false;
+}
 function openAddModal(target='daily'){
-  addTarget=target;
+  addTarget='daily';
   addPickedDate=TD;
   let box=document.getElementById('_addBox'); if(box){box.remove();return;}
   box=document.createElement('div');box.id='_addBox';box.className='add-backdrop';
@@ -1292,10 +1420,13 @@ function openAddModal(target='daily'){
       <div style="font-size:18px;font-weight:800;color:var(--pt)">Add task</div>
       <button class="bact" onclick="closeAddModal()" style="opacity:1">${ic('x',16)}</button>
     </div>
-    <div class="add-where"><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button><button id="aw-pick" onclick="setAddTarget('pick')">Pick date</button></div>
-    <input id="addDateInput" type="date" value="${TD}" onchange="addPickedDate=this.value||TD" style="display:none;width:100%;border:1px solid var(--bd2);border-radius:14px;background:var(--bg);color:var(--pt);font-size:15px;font-family:var(--fnt);padding:10px 12px;outline:none;margin:0 0 10px">
-    <input id="addModalInput" spellcheck="true" autocapitalize="sentences" autocomplete="on" placeholder="What do you need to do?" onkeydown="if(event.key==='Enter')modalAdd('med'); if(event.key==='Escape')closeAddModal()">
+    <div style="position:relative">
+      <input id="addModalInput" spellcheck="true" autocapitalize="sentences" autocomplete="off" placeholder="What do you need to do?" oninput="renderAddSuggestions(this.value)" onkeydown="addInputKey(event)">
+      <div id="addSuggest" class="add-suggest" style="display:none"></div>
+    </div>
     <div class="add-prio-row"><button class="qbtn high" onclick="modalAdd('high')">High</button><button class="qbtn med" onclick="modalAdd('med')">Medium</button><button class="qbtn low" onclick="modalAdd('low')">Low</button></div>
+    <div class="add-date-row"><span class="add-date-label">When</span><button id="aw-daily" class="on" onclick="setAddTarget('daily')">Today</button><button id="aw-tomorrow" onclick="setAddTarget('tomorrow')">Tomorrow</button><button id="aw-pick" onclick="setAddTarget('pick')">${ic('calendar',12)} Pick date</button></div>
+    <input id="addDateInput" type="date" value="${TD}" onchange="addPickedDate=this.value||TD" style="display:none;width:100%;border:1px solid var(--bd2);border-radius:14px;background:var(--bg);color:var(--pt);font-size:15px;font-family:var(--fnt);padding:10px 12px;outline:none;margin:8px 0 0">
   </div>`;
   box.onclick=closeAddModal; document.body.appendChild(box); setAddTarget(addTarget); setTimeout(()=>document.getElementById('addModalInput')?.focus(),30);
 }
@@ -1307,12 +1438,12 @@ function setAddTarget(t){
   const dateInput=document.getElementById('addDateInput');
   if(dateInput){dateInput.style.display=t==='pick'?'block':'none'; if(t==='pick')addPickedDate=dateInput.value||TD;}
 }
-function closeAddModal(){document.getElementById('_addBox')?.remove();}
+function closeAddModal(){closeAddSuggestions();document.getElementById('_addBox')?.remove();addTarget='daily';addPickedDate=TD;}
 function modalAdd(priority='med'){
   const el=document.getElementById('addModalInput'); const text=(el?.value||'').trim().replace(/\s+/g,' '); if(!text)return;
-  const date=addTarget==='tomorrow'?ad(TD,1):(addTarget==='pick'?(document.getElementById('addDateInput')?.value||addPickedDate||TD):(S.v==='daily'?S.d:TD));
+  const date=addTarget==='tomorrow'?ad(TD,1):(addTarget==='pick'?(document.getElementById('addDateInput')?.value||addPickedDate||TD):TD);
   tf(date).push({id:nid(),text,priority,done:false});
-  if(el)el.value=''; closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
+  if(el)el.value=''; closeAddSuggestions(); closeAddModal(); dosave2(); if(S.v==='daily')S.d=date; re();
 }
 function cMenuHTML(item,ctx,kind,prio){
   if(menuSt!==item.id)return`<button class="bact" onclick="openMenu('${item.id}');event.stopPropagation()" title="More">${ic('dots',14)}</button>`;
@@ -1340,9 +1471,9 @@ function tBlock(t,prio,ctx){
       <span class="dh" onpointerdown="drS(event,{kind:'task',id:'${t.id}',prio:'${prio}',ctx:'${sourceCtx}'})">${ic('grip',14)}</span>
       <input type="checkbox" ${t.done?'checked':''} onchange="togItem('task','${sourceCtx}','${t.id}')" onclick="event.stopPropagation()">
       <button class="starbtn${t.focus&&!t.done?' on':''}" onclick="toggleFocus('${sourceCtx}','${t.id}');event.stopPropagation()" title="${t.focus?'Remove focus':'Mark focus'}">★</button>
-      ${isEdit
-        ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${sourceCtx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${sourceCtx}','task')">`
-        :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)} ${noteIndicatorHTML(t,sourceCtx,'task')}${fromBadgeHTML(t)}</span>`}
+    ${isEdit
+      ?`<input id="ei-${t.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(t.text)}" onblur="saveEdit('${t.id}','${sourceCtx}',this.value,'task')" onkeydown="editKey(event,'${t.id}','${sourceCtx}','task')">`
+      :`<span class="btxt${t.done?' done':''}" onclick="startEdit('${t.id}','${sourceCtx}','task')">${ec(t.text)} ${noteIndicatorHTML(t,sourceCtx,'task')}${fromBadgeHTML(t)}</span>`}
       ${carriedHTML(t)}
       <div class="row-actions"><button class="bact delete-action" onclick="delItem('task','${sourceCtx}','${t.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(t,sourceCtx,'task',prio)}</div>
     </div>
@@ -1355,10 +1486,11 @@ function gBlock(g,prio,ctx,kind){
   return`<div class="goalbk" data-did="${g.id}" data-dprio="${prio}" data-dctx="${ctx}">
     <span class="dh" onpointerdown="drS(event,{kind:'${kind}',id:'${g.id}',prio:'${prio}',ctx:'${ctx}'})">${ic('grip',14)}</span>
     <input type="checkbox" ${g.done?'checked':''} onchange="togItem('${kind}','${ctx}','${g.id}')" onclick="event.stopPropagation()">
+    ${kind==='wg'?weeklyFocusButtonHTML(g,ctx):''}
     ${prio&&kind!=='wg'?`<span class="ptag ${prio}" style="font-size:11px;${g.done?'opacity:.4':''}">${PL[prio]}</span>`:''}
     ${isEdit
-      ?`<input id="ei-${g.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="on" value="${ec(g.text)}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="editKey(event,'${g.id}','${ctx}','${kind}')">`
-      :`<span class="btxt${g.done?' done':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)} ${noteIndicatorHTML(g,ctx,kind)}${kind==='wg'?weeklyGoalCarriedHTML(g):''}</span>`}
+      ?`<input id="ei-${g.id}" class="binp" spellcheck="true" autocapitalize="sentences" autocomplete="off" value="${ec(g.text)}" oninput="${kind==='wg'||kind==='mg'?`renderTextSuggestions(this,'${kind}')`:''}" onblur="saveEdit('${g.id}','${ctx}',this.value,'${kind}')" onkeydown="${kind==='wg'||kind==='mg'?`if(textSuggestKey(event,'${kind}'))return;`:''}editKey(event,'${g.id}','${ctx}','${kind}')">`
+      :`<span class="btxt${g.done?' done':''}${kind==='wg'&&g.focus?' wg-focus-text':''}" style="flex:1" onclick="startEdit('${g.id}','${ctx}','${kind}')">${ec(g.text)} ${noteIndicatorHTML(g,ctx,kind)}${kind==='wg'?weeklyGoalCarriedHTML(g):''}</span>`}
     <div class="gacts"><button class="bact delete-action" onclick="delItem('${kind}','${ctx}','${g.id}');event.stopPropagation()" title="Delete">${ic('trash',14)}</button>${cMenuHTML(g,ctx,kind,prio)}</div>
   </div>`;
 }
@@ -1484,6 +1616,7 @@ function rw(){
   const dG=goals.filter(g=>g.done).length;
   const goalsColKey='col-wg';
   const goalsCollapsed=!!collapsed[goalsColKey];
+  const weeklyGoals=[...goals].sort((a,b)=>Number(!!b.focus)-Number(!!a.focus));
   const weeklyGoalsHTML=`<div class="goal-panel weekly">
     <div class="sh sh-toggle" onclick="collapsed['${goalsColKey}']=!collapsed['${goalsColKey}'];re()">
       ${ic('target',13)}&thinsp;Weekly goals
@@ -1491,7 +1624,7 @@ function rw(){
       <span class="col-chevron" style="transform:rotate(${goalsCollapsed?'0':'90'}deg)">${ic('chevron-right',11,'color:var(--tt)')}</span>
     </div>
     ${goalsCollapsed?'':`<div class="dzone" data-zone data-zprio="" data-zctx="${wk}">
-      ${goals.map(g=>gBlock(g,'',wk,'wg')).join('')}
+      ${weeklyGoals.map(g=>gBlock(g,'',wk,'wg')).join('')}
     </div>
     ${addFH('wg-'+wk,'','wg',wk)}`}
   </div>`;
