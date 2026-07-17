@@ -726,20 +726,75 @@ function carryForwardUnfinishedTasks(){
   });
   return changed;
 }
+function weeklyGoalSourceId(g){return g&&String(g.sourceId||g.id||'');}
+function isAutoCarriedWeeklyGoal(g){return !!(g&&g.sourceId&&g.carriedFrom);}
+function repairWeeklyGoalCarryState(){
+  D.wg=D.wg||{};
+  const weeks=Object.keys(D.wg).sort();
+  let changed=false;
+
+  // Older carried goals may predate sourceId. Backfill only when the source is unambiguous.
+  weeks.forEach(week=>(Array.isArray(D.wg[week])?D.wg[week]:[]).forEach(g=>{
+    if(!g||!g.carriedFrom||g.sourceId)return;
+    const fromGoals=Array.isArray(D.wg[g.carriedFrom])?D.wg[g.carriedFrom]:[];
+    const candidates=fromGoals.filter(source=>
+      source&&String(source.text||'').trim()===String(g.text||'').trim()
+      && String(source.priority||'med')===String(g.priority||'med')
+    );
+    const sourceIds=[...new Set(candidates.map(weeklyGoalSourceId).filter(Boolean))];
+    if(sourceIds.length===1){g.sourceId=sourceIds[0];changed=true;}
+  }));
+
+  // Keep at most one system-carried copy of a source in each week.
+  weeks.forEach(week=>{
+    const arr=Array.isArray(D.wg[week])?D.wg[week]:[];
+    const next=[],seen=new Map();
+    arr.forEach(g=>{
+      const sourceId=isAutoCarriedWeeklyGoal(g)?weeklyGoalSourceId(g):'';
+      if(!sourceId){next.push(g);return;}
+      if(!seen.has(sourceId)){seen.set(sourceId,next.length);next.push(g);return;}
+      const keptIndex=seen.get(sourceId);
+      if(g.done&&!next[keptIndex].done)next[keptIndex]=g;
+      changed=true;
+    });
+    if(next.length!==arr.length)D.wg[week]=next;
+  });
+
+  const completedAt=new Map();
+  weeks.forEach(week=>(Array.isArray(D.wg[week])?D.wg[week]:[]).forEach(g=>{
+    if(!g||!g.done)return;
+    const sourceId=weeklyGoalSourceId(g);
+    if(sourceId&&(!completedAt.has(sourceId)||week<completedAt.get(sourceId)))completedAt.set(sourceId,week);
+  }));
+
+  // A completed goal stays in its completion week; only later auto-carried copies are removed.
+  weeks.forEach(week=>{
+    const arr=Array.isArray(D.wg[week])?D.wg[week]:[];
+    const next=arr.filter(g=>{
+      if(!isAutoCarriedWeeklyGoal(g))return true;
+      const completedWeek=completedAt.get(weeklyGoalSourceId(g));
+      if(completedWeek&&week>completedWeek){changed=true;return false;}
+      return true;
+    });
+    if(next.length!==arr.length)D.wg[week]=next;
+  });
+  return changed;
+}
 function carryForwardWeeklyGoals(targetWeek){
   D.wg=D.wg||{};
+  let changed=repairWeeklyGoalCarryState();
   const prevWeek=ad(targetWeek,-7);
   const prev=Array.isArray(D.wg[prevWeek])?D.wg[prevWeek]:[];
   const unfinished=prev.filter(g=>g&&!g.done&&String(g.text||'').trim());
-  if(!unfinished.length)return false;
+  if(!unfinished.length)return changed;
   const target=Array.isArray(D.wg[targetWeek])?D.wg[targetWeek]:(D.wg[targetWeek]=[]);
-  let changed=false;
   unfinished.forEach(g=>{
     const text=String(g.text||'').trim();
-    const sourceId=g.sourceId||g.id;
+    let sourceId=weeklyGoalSourceId(g);
+    if(!sourceId){g.id=nid();sourceId=g.id;changed=true;}
     const exists=target.some(x=>x&&(
-      (sourceId&&x.sourceId===sourceId)||
-      (x.carriedFrom===prevWeek&&String(x.text||'').trim()===text)
+      (isAutoCarriedWeeklyGoal(x)&&weeklyGoalSourceId(x)===sourceId)
+      || (!x.sourceId&&x.carriedFrom===prevWeek&&String(x.text||'').trim()===text)
     ));
     if(exists)return;
     const copy={id:nid(),text,priority:g.priority||'med',done:false,carriedFrom:prevWeek,sourceId};
@@ -1031,7 +1086,10 @@ function togItem(kind,ctx,id){
     const r=findTask(ctx,id);
     if(r.task){if(!r.task.done)justDone=id;r.task.done=!r.task.done;}
   }
-  else if(kind==='wg'){const g=wgf(ctx).find(g=>g.id===id);if(g)g.done=!g.done;}
+  else if(kind==='wg'){
+    const g=wgf(ctx).find(g=>g.id===id);
+    if(g){g.done=!g.done;if(g.done)repairWeeklyGoalCarryState();}
+  }
   else if(kind==='mg'){const g=gf(ctx).find(g=>g.id===id);if(g)g.done=!g.done;}
   dosave2();re();
   setTimeout(()=>{justDone=null;},650);
