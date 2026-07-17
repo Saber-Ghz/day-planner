@@ -554,10 +554,10 @@ function undoLast(){
   updateUndoBtn();re();showToast('Undone');
 }
 
-function dosave2(){
+function dosave2(recordUndo=true){
   touchLocalUpdatedAt();
   const j=JSON.stringify(D);
-  if(lastDJson && j!==lastDJson){undoStack.push(lastDJson);if(undoStack.length>25)undoStack.shift();}
+  if(recordUndo&&lastDJson&&j!==lastDJson){undoStack.push(lastDJson);if(undoStack.length>25)undoStack.shift();}
   lastDJson=j;updateUndoBtn();
   try{if(window.storage)window.storage.set('pl3',j);}catch(e){}
   try{localStorage.setItem('pl3',j);}catch(e){}
@@ -680,10 +680,13 @@ async function syncFromDriveAfterSignIn(){
       if(confirm('Google Drive has newer planner data. Replace local data with Drive data?')){
         driveApplying=true;
         D=normalizeData(remoteData);
+        const weeklyChanged=processWeeklyGoalCarryForward();
+        if(weeklyChanged)D.updatedAt=new Date().toISOString();
         lastDJson=JSON.stringify(D);
         try{if(window.storage)window.storage.set('pl3',lastDJson);}catch(e){}
-        try{localStorage.setItem('pl3',lastDJson);localStorage.setItem('pl3_updatedAt',remoteData.updatedAt||file.modifiedTime||new Date().toISOString());}catch(e){}
+        try{localStorage.setItem('pl3',lastDJson);localStorage.setItem('pl3_updatedAt',D.updatedAt||remoteData.updatedAt||file.modifiedTime||new Date().toISOString());}catch(e){}
         driveApplying=false;
+        if(weeklyChanged)scheduleDriveSave();
         updateUndoBtn();re();setDriveStatus('synced','Synced');showToast('Loaded from Google Drive');return;
       }
       setDriveStatus('local','Local only — Drive has newer data');return;
@@ -726,86 +729,78 @@ function carryForwardUnfinishedTasks(){
   });
   return changed;
 }
-function weeklyGoalSourceId(g){return g&&String(g.sourceId||g.id||'');}
+function weeklyGoalRootId(g){return g&&String(g.sourceId||g.id||'');}
 function isAutoCarriedWeeklyGoal(g){return !!(g&&g.sourceId&&g.carriedFrom);}
-function repairWeeklyGoalCarryState(){
+function processWeeklyGoalCarryForward(){
   D.wg=D.wg||{};
-  const weeks=Object.keys(D.wg).sort();
+  const currentWeek=monOf(todayKey());
   let changed=false;
 
-  // Older carried goals may predate sourceId. Backfill only when the source is unambiguous.
-  weeks.forEach(week=>(Array.isArray(D.wg[week])?D.wg[week]:[]).forEach(g=>{
-    if(!g||!g.carriedFrom||g.sourceId)return;
-    const fromGoals=Array.isArray(D.wg[g.carriedFrom])?D.wg[g.carriedFrom]:[];
-    const candidates=fromGoals.filter(source=>
-      source&&String(source.text||'').trim()===String(g.text||'').trim()
-      && String(source.priority||'med')===String(g.priority||'med')
-    );
-    const sourceIds=[...new Set(candidates.map(weeklyGoalSourceId).filter(Boolean))];
-    if(sourceIds.length===1){g.sourceId=sourceIds[0];changed=true;}
-  }));
-
-  // Keep at most one system-carried copy of a source in each week.
-  weeks.forEach(week=>{
+  // Future weeks may contain manual goals, but never auto-carried copies before their week arrives.
+  Object.keys(D.wg).forEach(week=>{
     const arr=Array.isArray(D.wg[week])?D.wg[week]:[];
-    const next=[],seen=new Map();
+    if(week<=currentWeek)return;
+    const next=arr.filter(g=>!isAutoCarriedWeeklyGoal(g));
+    if(next.length!==arr.length){D.wg[week]=next;changed=true;}
+  });
+
+  // Preserve originals while enforcing at most one auto-carried copy per lineage in each week.
+  Object.keys(D.wg).filter(week=>week<=currentWeek).forEach(week=>{
+    const arr=Array.isArray(D.wg[week])?D.wg[week]:[];
+    const originalRoots=new Set(arr.filter(g=>g&&!isAutoCarriedWeeklyGoal(g)).map(weeklyGoalRootId).filter(Boolean));
+    const next=[],carriedIndexes=new Map();
     arr.forEach(g=>{
-      const sourceId=isAutoCarriedWeeklyGoal(g)?weeklyGoalSourceId(g):'';
-      if(!sourceId){next.push(g);return;}
-      if(!seen.has(sourceId)){seen.set(sourceId,next.length);next.push(g);return;}
-      const keptIndex=seen.get(sourceId);
+      if(!isAutoCarriedWeeklyGoal(g)){next.push(g);return;}
+      const rootId=weeklyGoalRootId(g);
+      if(!rootId||originalRoots.has(rootId)){changed=true;return;}
+      if(!carriedIndexes.has(rootId)){carriedIndexes.set(rootId,next.length);next.push(g);return;}
+      const keptIndex=carriedIndexes.get(rootId);
       if(g.done&&!next[keptIndex].done)next[keptIndex]=g;
       changed=true;
     });
     if(next.length!==arr.length)D.wg[week]=next;
   });
 
-  const completedAt=new Map();
-  weeks.forEach(week=>(Array.isArray(D.wg[week])?D.wg[week]:[]).forEach(g=>{
-    if(!g||!g.done)return;
-    const sourceId=weeklyGoalSourceId(g);
-    if(sourceId&&(!completedAt.has(sourceId)||week<completedAt.get(sourceId)))completedAt.set(sourceId,week);
-  }));
-
-  // A completed goal stays in its completion week; only later auto-carried copies are removed.
-  weeks.forEach(week=>{
+  const lineages=new Map();
+  Object.keys(D.wg).sort().forEach(week=>{
+    if(week>currentWeek)return;
     const arr=Array.isArray(D.wg[week])?D.wg[week]:[];
-    const next=arr.filter(g=>{
-      if(!isAutoCarriedWeeklyGoal(g))return true;
-      const completedWeek=completedAt.get(weeklyGoalSourceId(g));
-      if(completedWeek&&week>completedWeek){changed=true;return false;}
-      return true;
+    arr.forEach(g=>{
+      if(!g||!String(g.text||'').trim())return;
+      const rootId=weeklyGoalRootId(g);if(!rootId)return;
+      const state=lineages.get(rootId)||{rootId,completedBeforeCurrent:false,latest:null};
+      if(week<currentWeek){
+        if(g.done)state.completedBeforeCurrent=true;
+        if(!state.latest||week>state.latest.week)state.latest={week,goal:g};
+      }
+      lineages.set(rootId,state);
     });
-    if(next.length!==arr.length)D.wg[week]=next;
   });
-  return changed;
-}
-function carryForwardWeeklyGoals(targetWeek){
-  D.wg=D.wg||{};
-  let changed=repairWeeklyGoalCarryState();
-  const prevWeek=ad(targetWeek,-7);
-  const prev=Array.isArray(D.wg[prevWeek])?D.wg[prevWeek]:[];
-  const unfinished=prev.filter(g=>g&&!g.done&&String(g.text||'').trim());
-  if(!unfinished.length)return changed;
-  const target=Array.isArray(D.wg[targetWeek])?D.wg[targetWeek]:(D.wg[targetWeek]=[]);
-  unfinished.forEach(g=>{
-    const text=String(g.text||'').trim();
-    let sourceId=weeklyGoalSourceId(g);
-    if(!sourceId){g.id=nid();sourceId=g.id;changed=true;}
-    const exists=target.some(x=>x&&(
-      (isAutoCarriedWeeklyGoal(x)&&weeklyGoalSourceId(x)===sourceId)
-      || (!x.sourceId&&x.carriedFrom===prevWeek&&String(x.text||'').trim()===text)
-    ));
-    if(exists)return;
-    const copy={id:nid(),text,priority:g.priority||'med',done:false,carriedFrom:prevWeek,sourceId};
-    if(g.note)copy.note=g.note;
-    target.push(copy);
-    changed=true;
+
+  // If an earlier occurrence was completed, remove only its current auto copy.
+  const current=Array.isArray(D.wg[currentWeek])?D.wg[currentWeek]:(D.wg[currentWeek]=[]);
+  const validCurrent=current.filter(g=>{
+    if(!isAutoCarriedWeeklyGoal(g))return true;
+    const state=lineages.get(weeklyGoalRootId(g));
+    if(state&&state.completedBeforeCurrent){changed=true;return false;}
+    return true;
+  });
+  if(validCurrent.length!==current.length)D.wg[currentWeek]=validCurrent;
+
+  const currentGoals=D.wg[currentWeek];
+  const currentRoots=new Set(currentGoals.map(weeklyGoalRootId).filter(Boolean));
+  lineages.forEach(state=>{
+    const latest=state.latest;
+    if(state.completedBeforeCurrent||!latest||latest.goal.done!==false||currentRoots.has(state.rootId))return;
+    const source=latest.goal;
+    const copy={id:nid(),text:String(source.text||'').trim(),priority:source.priority||'med',done:false,carriedFrom:latest.week,sourceId:state.rootId};
+    if(source.note)copy.note=source.note;
+    currentGoals.push(copy);currentRoots.add(state.rootId);changed=true;
   });
   return changed;
 }
 
-function dailyMaintenance(render=true){
+function dailyMaintenance(render=true,save=true){
   const newToday=todayKey();
   const oldToday=TD;
   const dayChanged=newToday!==oldToday;
@@ -816,11 +811,12 @@ function dailyMaintenance(render=true){
     if(S.mv===mk(oldToday))S.mv=mk(TD);
   }
 
+  const weeklyChanged=processWeeklyGoalCarryForward();
+  if(save&&weeklyChanged)dosave2(false);
   const carried=carryForwardUnfinishedTasks();
-  const weeklyCarried=carryForwardWeeklyGoals(monOf(newToday));
   const rec=generateRecurringTasks();
-  if(carried||weeklyCarried||rec)dosave2();
-  if(render&&(dayChanged||carried||weeklyCarried||rec))re();
+  if(save&&(carried||rec))dosave2();
+  if(render&&(dayChanged||weeklyChanged||carried||rec))re();
 }
 
 function showApp(){
@@ -1088,7 +1084,7 @@ function togItem(kind,ctx,id){
   }
   else if(kind==='wg'){
     const g=wgf(ctx).find(g=>g.id===id);
-    if(g){g.done=!g.done;if(g.done)repairWeeklyGoalCarryState();}
+    if(g){g.done=!g.done;processWeeklyGoalCarryForward();}
   }
   else if(kind==='mg'){const g=gf(ctx).find(g=>g.id===id);if(g)g.done=!g.done;}
   dosave2();re();
@@ -1161,7 +1157,7 @@ function isMobileUI(){
   return window.matchMedia&&window.matchMedia('(max-width:600px)').matches;
 }
 function weeklyGoalCarriedHTML(g){
-  return (g.carriedFrom||g.sourceId)?`<span class="carried-pill" onclick="event.stopPropagation()" style="cursor:default">Carried</span>`:'';
+  return isAutoCarriedWeeklyGoal(g)?`<span class="carried-pill" onclick="event.stopPropagation()" style="cursor:default">Carried</span>`:'';
 }
 function weeklyFocusButtonHTML(g,ctx){
   return `<button class="wg-focus-btn${g.focus?' on':''}" onclick="toggleWeeklyFocus('${ctx}','${g.id}');event.stopPropagation()" title="${g.focus?'Remove weekly focus':'Mark weekly focus'}" aria-label="${g.focus?'Remove weekly focus':'Mark weekly focus'}">★</button>`;
@@ -1625,8 +1621,6 @@ function rd(){
 
 function rw(){
   const m=monOf(S.d),dates=Array.from({length:7},(_,i)=>ad(m,i)),wk=m;
-  const weeklyCarried=carryForwardWeeklyGoals(wk);
-  if(weeklyCarried)dosave2();
   const note=D.wn[wk]||'',goals=wgf(wk);
   let wD=0,wT=0;
   const cols=dates.map((dt,i)=>{
@@ -1825,7 +1819,7 @@ function importData(){
         const p=JSON.parse(ev.target.result);
         if(typeof p!=='object'||Array.isArray(p))throw new Error();
         const added=mergePlannerData(p);
-        dailyMaintenance(false);
+        dailyMaintenance(false,false);
         dosave2();re();
         showToast(added>0?`✓ Imported ${added} new item${added===1?'':'s'}`:'✓ Import complete — no duplicates added');
       }catch{showToast('⚠ Invalid file');}
